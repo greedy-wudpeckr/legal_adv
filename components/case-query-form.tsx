@@ -35,21 +35,21 @@ export default function CaseQueryForm({ setSpeaking, setCurrentSubtitle, setSubt
     resolver: zodResolver(caseQuerySchema),
   });
 
-  const calculateDuration = (text: string): number => {
-    // Calculate duration based on text length
-    // Roughly 150-200 words per minute for comfortable reading
+  const calculateAudioDuration = (text: string): number => {
+    // Estimate audio duration based on text length
+    // Average speaking rate: ~150-200 words per minute
     const words = text.trim().split(/\s+/).length;
-    const wordsPerSecond = 2.5; // Comfortable reading pace
-    return Math.max(2000, words * (1000 / wordsPerSecond)); // Minimum 2 seconds
+    const wordsPerSecond = 2.5; // Conservative estimate for clear speech
+    return Math.max(3000, words * (1000 / wordsPerSecond)); // Minimum 3 seconds
   };
 
   const onSubmit = async (data: CaseQueryForm) => {
     try {
-      // Update subtitle to show the user's question
+      // Show user's question first
       if (setCurrentSubtitle && setSubtitleDuration) {
         const questionText = `Question: ${data.caseQuery}`;
         setCurrentSubtitle(questionText);
-        setSubtitleDuration(calculateDuration(questionText));
+        setSubtitleDuration(3000); // Fixed 3 seconds for question display
       }
 
       // Get Gemini response
@@ -62,15 +62,16 @@ export default function CaseQueryForm({ setSpeaking, setCurrentSubtitle, setSubt
       const result = await res.json();
       const answer: string = result.text || "No response received.";
 
-      // Update subtitle with the AI response
+      // Calculate expected audio duration
+      const estimatedDuration = calculateAudioDuration(answer);
+
+      // Set subtitle text and duration BEFORE starting audio
       if (setCurrentSubtitle && setSubtitleDuration) {
         setCurrentSubtitle(answer);
-        setSubtitleDuration(calculateDuration(answer));
+        setSubtitleDuration(estimatedDuration);
       }
 
-      // Call ElevenLabs TTS API
-      setSpeaking(true);
-
+      // Get audio from ElevenLabs
       const audioRes = await fetch('/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -83,34 +84,97 @@ export default function CaseQueryForm({ setSpeaking, setCurrentSubtitle, setSubt
       const audata = await audioRes.json();
       const audio = new Audio(`data:audio/mpeg;base64,${audata.audio}`);
 
-      audio.onended = () => {
-        setSpeaking(false);
-        // Reset subtitle after speech ends
-        if (setCurrentSubtitle && setSubtitleDuration) {
-          setTimeout(() => {
-            setCurrentSubtitle("Ask me another legal question...");
-            setSubtitleDuration(2500);
-          }, 1000);
+      // Set up audio event handlers BEFORE playing
+      audio.onloadedmetadata = () => {
+        // Update duration with actual audio duration if available
+        if (setSubtitleDuration && audio.duration && !isNaN(audio.duration)) {
+          const actualDuration = audio.duration * 1000; // Convert to milliseconds
+          setSubtitleDuration(actualDuration);
         }
       };
-      audio.onerror = () => {
+
+      audio.onplay = () => {
+        setSpeaking(true);
+        // Subtitle should already be set and animating at this point
+      };
+
+      audio.onended = () => {
+        setSpeaking(false);
+        // Clear subtitle after a brief delay
+        setTimeout(() => {
+          if (setCurrentSubtitle && setSubtitleDuration) {
+            setCurrentSubtitle("Ask me another legal question...");
+            setSubtitleDuration(2500);
+          }
+        }, 1000);
+      };
+
+      audio.onerror = (error) => {
+        console.error("Audio playback error:", error);
+        setSpeaking(false);
+        
+        // Show error message and display full text immediately
+        if (setCurrentSubtitle && setSubtitleDuration) {
+          setCurrentSubtitle(`Audio Error: ${answer}`);
+          setSubtitleDuration(1000); // Show immediately for 1 second, then clear
+          
+          // Clear after showing error
+          setTimeout(() => {
+            setCurrentSubtitle("Audio playback failed. Please try again.");
+            setSubtitleDuration(3000);
+          }, 5000);
+        }
+        
+        toast({
+          title: "Audio Error",
+          description: "Failed to play audio response, but text is displayed.",
+          variant: "destructive",
+        });
+      };
+
+      audio.onpause = () => {
+        setSpeaking(false);
+      };
+
+      audio.onabort = () => {
         setSpeaking(false);
         if (setCurrentSubtitle && setSubtitleDuration) {
-          setCurrentSubtitle("Error playing audio response");
+          setCurrentSubtitle("Audio playback was interrupted.");
           setSubtitleDuration(2000);
         }
       };
 
-      audio.play();
+      // Start playing audio - subtitle should already be animating
+      try {
+        await audio.play();
+      } catch (playError) {
+        console.error("Audio play failed:", playError);
+        setSpeaking(false);
+        
+        // Fallback: show full text immediately if audio fails to play
+        if (setCurrentSubtitle && setSubtitleDuration) {
+          setCurrentSubtitle(answer);
+          setSubtitleDuration(1); // Show all text immediately
+        }
+        
+        toast({
+          title: "Playback Error",
+          description: "Could not play audio. Text response is shown instead.",
+          variant: "destructive",
+        });
+      }
+
       reset();
 
     } catch (error) {
       console.error("Submission error:", error);
       setSpeaking(false);
+      
       if (setCurrentSubtitle && setSubtitleDuration) {
-        setCurrentSubtitle("Error: Failed to get response");
-        setSubtitleDuration(2000);
+        setCurrentSubtitle("Error: Failed to get response from AI");
+        setSubtitleDuration(3000);
       }
+      
       toast({
         title: "Error",
         description: "Failed to get response from Gemini or TTS.",
@@ -150,7 +214,7 @@ export default function CaseQueryForm({ setSpeaking, setCurrentSubtitle, setSubt
             {isSubmitting ? (
               <div className="flex items-center gap-2">
                 <div className="border-2 border-white border-t-transparent rounded-full w-4 h-4 animate-spin" />
-                Submitting...
+                Processing...
               </div>
             ) : (
               "Submit Query"

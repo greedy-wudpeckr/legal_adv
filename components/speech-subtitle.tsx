@@ -20,17 +20,29 @@ export default function SpeechSubtitle({
 }: SpeechSubtitleProps) {
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [words, setWords] = useState<string[]>([]);
+  const [isAnimating, setIsAnimating] = useState(false);
 
   useEffect(() => {
     if (text.trim()) {
       const wordArray = text.trim().split(/\s+/);
       setWords(wordArray);
       setCurrentWordIndex(0);
+      setIsAnimating(true);
     }
   }, [text]);
 
   useEffect(() => {
-    if (!isVisible || words.length === 0) return;
+    if (!isVisible || words.length === 0 || !isAnimating) return;
+
+    // If duration is very short (like 1ms), show all text immediately
+    if (duration <= 100) {
+      setCurrentWordIndex(words.length);
+      setIsAnimating(false);
+      if (onComplete) {
+        setTimeout(onComplete, 100);
+      }
+      return;
+    }
 
     const wordInterval = duration / words.length;
     
@@ -41,6 +53,7 @@ export default function SpeechSubtitle({
         // If we've shown all words, call onComplete and stop
         if (nextIndex >= words.length) {
           clearInterval(timer);
+          setIsAnimating(false);
           if (onComplete) {
             setTimeout(onComplete, 500); // Small delay before calling complete
           }
@@ -52,7 +65,7 @@ export default function SpeechSubtitle({
     }, wordInterval);
 
     return () => clearInterval(timer);
-  }, [words, duration, isVisible, onComplete]);
+  }, [words, duration, isVisible, onComplete, isAnimating]);
 
   if (!isVisible || !text.trim()) {
     return null;
@@ -72,7 +85,7 @@ export default function SpeechSubtitle({
     )}>
       <p className="text-white text-center text-lg leading-relaxed font-medium min-h-[1.5em]">
         {displayText}
-        {currentWordIndex < words.length - 1 && (
+        {isAnimating && currentWordIndex < words.length - 1 && (
           <span className="inline-block w-2 h-6 bg-amber-400 ml-1 animate-pulse" />
         )}
       </p>
