@@ -21,28 +21,13 @@ import {
   Eye,
   Mic,
   Trophy,
-  Star,
-  RotateCcw,
-  Home,
-  Award,
-  Lightbulb,
-  Volume2,
-  VolumeX,
-  BarChart3,
-  Settings
+  RotateCcw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getCaseById } from '@/data/sample-cases';
 import { updatePlayerStats } from '@/lib/progression';
-import { CaseResult } from '@/types/progression';
 import { addLeaderboardEntry } from '@/lib/leaderboard';
 import { soundManager } from '@/lib/sound-manager';
-import PlayerStatsComponent from '@/components/player-stats';
-import HintSystem from '@/components/hint-system';
-import CaseReplay from '@/components/case-replay';
-import LeaderboardComponent from '@/components/leaderboard';
-import GandhiAvatar from '@/components/gandhi-avatar';
-import { Hint } from '@/types/hints';
 
 type BattlePhase = 'opening-statements' | 'evidence-presentation' | 'witness-examination' | 'closing-arguments';
 type PlayerRole = 'defense' | 'prosecution';
@@ -75,20 +60,16 @@ interface BattleState {
   } | null;
   gamePhase: 'gandhi-speaking' | 'player-choosing' | 'showing-results' | 'game-over';
   flashEffect: 'none' | 'green' | 'red';
-  gandhiMood: 'confident' | 'worried' | 'neutral' | 'thinking';
+  gandhiMood: 'confident' | 'worried' | 'neutral';
   phaseContext: {
     evidencePresented?: string[];
     witnessesExamined?: string[];
     keyPoints?: string[];
   };
-  choiceHistory: {
-    phase: BattlePhase;
-    choice: ResponseOption;
-    effectiveness: EffectivenessLevel;
-  }[];
-  startTime: number;
-  hintsUsed: string[];
-  totalHintCost: number;
+  gameStartTime: number;
+  perfectChoices: number;
+  totalChoices: number;
+  gameCompleted: boolean;
 }
 
 const phaseNames = {
@@ -420,11 +401,6 @@ export default function BattlePage() {
   const playerRole = (searchParams.get('role') || 'defense') as PlayerRole;
   
   const caseData = getCaseById(caseId);
-  const [showStatsModal, setShowStatsModal] = useState(false);
-  const [showHintSystem, setShowHintSystem] = useState(false);
-  const [showReplay, setShowReplay] = useState(false);
-  const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const [soundEnabled, setSoundEnabled] = useState(true);
   
   const [battleState, setBattleState] = useState<BattleState>({
     currentPhase: 'opening-statements',
@@ -446,41 +422,42 @@ export default function BattlePage() {
       witnessesExamined: [],
       keyPoints: []
     },
-    choiceHistory: [],
-    startTime: Date.now(),
-    hintsUsed: [],
-    totalHintCost: 0
+    gameStartTime: Date.now(),
+    perfectChoices: 0,
+    totalChoices: 0,
+    gameCompleted: false
   });
 
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
 
-  // Initialize sound system
-  useEffect(() => {
-    setSoundEnabled(soundManager.isEnabled());
-    soundManager.playLoop('courtroom_ambience');
-    
-    return () => {
-      soundManager.stopAll();
-    };
-  }, []);
-
   // Main game timer
   useEffect(() => {
-    if (battleState.gamePhase === 'game-over') return;
+    if (battleState.gamePhase === 'game-over' || battleState.gameCompleted) return;
     
     const timer = setInterval(() => {
-      setBattleState(prev => ({
-        ...prev,
-        timeRemaining: Math.max(0, prev.timeRemaining - 1)
-      }));
+      setBattleState(prev => {
+        if (prev.timeRemaining <= 1) {
+          // Time's up - end the game
+          return {
+            ...prev,
+            timeRemaining: 0,
+            gamePhase: 'game-over',
+            gameCompleted: true
+          };
+        }
+        return {
+          ...prev,
+          timeRemaining: prev.timeRemaining - 1
+        };
+      });
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [battleState.gamePhase]);
+  }, [battleState.gamePhase, battleState.gameCompleted]);
 
   // Choice timer with phase-specific durations
   useEffect(() => {
-    if (battleState.gamePhase !== 'player-choosing') return;
+    if (battleState.gamePhase !== 'player-choosing' || battleState.gameCompleted) return;
     
     const timer = setInterval(() => {
       setBattleState(prev => {
@@ -497,7 +474,7 @@ export default function BattlePage() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [battleState.gamePhase, battleState.choiceTimeRemaining]);
+  }, [battleState.gamePhase, battleState.choiceTimeRemaining, battleState.gameCompleted]);
 
   // Flash effect timer
   useEffect(() => {
@@ -505,16 +482,9 @@ export default function BattlePage() {
       const timer = setTimeout(() => {
         setBattleState(prev => ({ ...prev, flashEffect: 'none' }));
       }, 1000);
-      return () => clearInterval(timer);
+      return () => clearTimeout(timer);
     }
   }, [battleState.flashEffect]);
-
-  // Sound effects for game events
-  useEffect(() => {
-    if (battleState.gamePhase === 'gandhi-speaking') {
-      soundManager.play('paper_shuffle');
-    }
-  }, [battleState.currentPhase]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -554,6 +524,22 @@ export default function BattlePage() {
     }
   };
 
+  const getGandhiMoodEmoji = (mood: 'confident' | 'worried' | 'neutral') => {
+    switch (mood) {
+      case 'confident': return '😤';
+      case 'worried': return '😰';
+      case 'neutral': return '🤔';
+    }
+  };
+
+  const getGandhiMoodColor = (mood: 'confident' | 'worried' | 'neutral') => {
+    switch (mood) {
+      case 'confident': return 'bg-red-100 text-red-800';
+      case 'worried': return 'bg-yellow-100 text-yellow-800';
+      case 'neutral': return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   const getPhaseTimeLimit = (phase: BattlePhase) => {
     switch (phase) {
       case 'opening-statements': return 45;
@@ -565,7 +551,7 @@ export default function BattlePage() {
   };
 
   const handleOptionSelect = (optionIndex: number, autoSelected = false) => {
-    if (battleState.gamePhase !== 'player-choosing') return;
+    if (battleState.gamePhase !== 'player-choosing' || battleState.gameCompleted) return;
     
     setSelectedOption(optionIndex);
     const selectedResponse = battleState.playerOptions[optionIndex];
@@ -595,12 +581,9 @@ export default function BattlePage() {
       updatedContext.witnessesExamined = [...(updatedContext.witnessesExamined || []), selectedResponse.strategyType];
     }
 
-    // Add to choice history
-    const newChoiceHistory = [...battleState.choiceHistory, {
-      phase: battleState.currentPhase,
-      choice: selectedResponse,
-      effectiveness: selectedResponse.effectiveness
-    }];
+    // Update choice tracking
+    const newPerfectChoices = battleState.perfectChoices + (selectedResponse.effectiveness === 'perfect' ? 1 : 0);
+    const newTotalChoices = battleState.totalChoices + 1;
 
     setBattleState(prev => ({
       ...prev,
@@ -615,7 +598,8 @@ export default function BattlePage() {
       flashEffect,
       gandhiMood,
       phaseContext: updatedContext,
-      choiceHistory: newChoiceHistory
+      perfectChoices: newPerfectChoices,
+      totalChoices: newTotalChoices
     }));
 
     // Auto-advance after showing results
@@ -628,11 +612,50 @@ export default function BattlePage() {
     setBattleState(prev => {
       const nextPhaseNumber = prev.phaseNumber + 1;
       
+      // Check if game should end
       if (nextPhaseNumber > prev.totalPhases) {
-        soundManager.play('gavel');
+        // Game completed - save stats and show final results
+        const gameWon = prev.score > 20;
+        const timeElapsed = Math.floor((Date.now() - prev.gameStartTime) / 1000);
+        const accuracy = prev.totalChoices > 0 ? prev.perfectChoices / prev.totalChoices : 0;
+        
+        // Update player stats
+        if (caseData) {
+          const caseResult = {
+            caseId: caseData.caseId,
+            won: gameWon,
+            score: prev.score,
+            accuracy,
+            timeElapsed,
+            perfectChoices: prev.perfectChoices,
+            totalChoices: prev.totalChoices
+          };
+          
+          updatePlayerStats(caseResult, caseData.difficulty);
+          
+          // Add to leaderboard if won
+          if (gameWon) {
+            addLeaderboardEntry({
+              playerName: 'Player', // Could be customizable
+              caseId: caseData.caseId,
+              caseName: caseData.title,
+              timeElapsed,
+              score: prev.score,
+              accuracy,
+              difficulty: caseData.difficulty,
+              completedAt: new Date(),
+              role: playerRole
+            });
+          }
+        }
+        
+        // Play final sound
+        soundManager.play(gameWon ? 'success' : 'failure');
+        
         return {
           ...prev,
-          gamePhase: 'game-over'
+          gamePhase: 'game-over',
+          gameCompleted: true
         };
       }
 
@@ -640,6 +663,9 @@ export default function BattlePage() {
       const nextPhase = phases[nextPhaseNumber - 1];
       const oppositionRole = playerRole === 'defense' ? 'prosecution' : 'defense';
       const timeLimit = getPhaseTimeLimit(nextPhase);
+      
+      // Play phase transition sound
+      soundManager.play('gavel');
       
       return {
         ...prev,
@@ -656,47 +682,36 @@ export default function BattlePage() {
 
     setSelectedOption(null);
     
-    // Auto-advance to player choosing after Gandhi speaks
+    // Auto-advance to player choosing after Gandhi speaks (only if game not completed)
     setTimeout(() => {
-      setBattleState(prev => ({
-        ...prev,
-        gamePhase: 'player-choosing',
-        gandhiMood: 'thinking'
-      }));
+      setBattleState(prev => {
+        if (prev.gameCompleted || prev.gamePhase === 'game-over') {
+          return prev; // Don't change state if game is completed
+        }
+        return {
+          ...prev,
+          gamePhase: 'player-choosing'
+        };
+      });
     }, 4000);
   };
 
   const handleGandhiSpeechEnd = () => {
+    if (battleState.gameCompleted) return;
+    
     setBattleState(prev => ({
       ...prev,
       gamePhase: 'player-choosing',
-      choiceTimeRemaining: getPhaseTimeLimit(prev.currentPhase),
-      gandhiMood: 'thinking'
+      choiceTimeRemaining: getPhaseTimeLimit(prev.currentPhase)
     }));
   };
 
-  const handleUseHint = (hint: Hint) => {
-    if (battleState.score < hint.cost) return;
-    
-    setBattleState(prev => ({
-      ...prev,
-      score: prev.score - hint.cost,
-      hintsUsed: [...prev.hintsUsed, hint.id],
-      totalHintCost: prev.totalHintCost + hint.cost
-    }));
-    
-    soundManager.play('success');
-    setShowHintSystem(false);
+  const handleRetry = () => {
+    router.push(`/courtroom-battle/case-briefing/${caseId}`);
   };
 
-  const toggleSound = () => {
-    const newEnabled = !soundEnabled;
-    setSoundEnabled(newEnabled);
-    soundManager.setEnabled(newEnabled);
-    
-    if (newEnabled) {
-      soundManager.playLoop('courtroom_ambience');
-    }
+  const handleNewCase = () => {
+    router.push('/courtroom-battle');
   };
 
   if (!caseData) {
@@ -712,265 +727,71 @@ export default function BattlePage() {
     );
   }
 
-  if (battleState.gamePhase === 'game-over') {
+  if (battleState.gamePhase === 'game-over' || battleState.gameCompleted) {
     const finalVerdict = battleState.score > 20 ? 'Victory!' : 
-                        battleState.score < -20 ? 'Defeat' : 
-                        'Hung Jury';
-    const won = battleState.score > 20;
-    const hung = battleState.score >= -20 && battleState.score <= 20;
-    
-    // Calculate performance metrics
-    const timeElapsed = Math.floor((Date.now() - battleState.startTime) / 1000);
-    const perfectChoices = battleState.choiceHistory.filter(c => c.effectiveness === 'perfect').length;
-    const goodChoices = battleState.choiceHistory.filter(c => c.effectiveness === 'good').length;
-    const weakChoices = battleState.choiceHistory.filter(c => c.effectiveness === 'weak').length;
-    const badChoices = battleState.choiceHistory.filter(c => c.effectiveness === 'bad').length;
-    const totalChoices = battleState.choiceHistory.length;
-    const accuracy = totalChoices > 0 ? ((perfectChoices + goodChoices) / totalChoices) * 100 : 0;
-    
-    // Update player stats and get achievements
-    const caseResult: Omit<CaseResult, 'xpEarned' | 'achievementsUnlocked'> = {
-      caseId,
-      won,
-      score: battleState.score,
-      accuracy: accuracy / 100,
-      timeElapsed,
-      perfectChoices,
-      totalChoices
-    };
-    
-    const { updatedStats, newAchievements } = updatePlayerStats(caseResult, caseData.difficulty);
-    const xpEarned = updatedStats.totalXP - (updatedStats.totalXP - newAchievements.reduce((sum, a) => sum + a.xpReward, 0));
-    
-    // Add to leaderboard if won
-    if (won) {
-      addLeaderboardEntry({
-        playerName: 'Player', // Could be customizable
-        caseId,
-        caseName: caseData.title,
-        timeElapsed,
-        score: battleState.score,
-        accuracy: accuracy / 100,
-        difficulty: caseData.difficulty,
-        completedAt: new Date(),
-        role: playerRole
-      });
-    }
-    
-    // Find weakest performance for defeat screen
-    const worstChoice = battleState.choiceHistory.reduce((worst, current) => {
-      const effectivenessOrder = { 'bad': 0, 'weak': 1, 'good': 2, 'perfect': 3 };
-      return effectivenessOrder[current.effectiveness] < effectivenessOrder[worst.effectiveness] ? current : worst;
-    }, battleState.choiceHistory[0]);
-    
-    // Prepare replay data
-    const replayChoices = battleState.choiceHistory.map(choice => ({
-      phase: phaseNames[choice.phase],
-      choice: choice.choice.text,
-      effectiveness: choice.effectiveness,
-      scoreChange: choice.choice.scoreChange,
-      explanation: choice.choice.explanation
-    }));
+                        battleState.score < -20 ? 'Defeat!' : 
+                        'Hung Jury!';
+    const verdictColor = battleState.score > 20 ? 'text-green-600' : 
+                        battleState.score < -20 ? 'text-red-600' : 
+                        'text-gray-600';
+    const gameWon = battleState.score > 20;
     
     return (
-      <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full border border-amber-200">
-          {/* Header */}
-          <div className={`p-8 text-center rounded-t-xl ${
-            won ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white' :
-            hung ? 'bg-gradient-to-r from-gray-500 to-slate-500 text-white' :
-            'bg-gradient-to-r from-red-500 to-rose-500 text-white'
-          }`}>
-            <div className={`w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center ${
-              won ? 'bg-white/20' : 'bg-white/20'
-            }`}>
-              {won ? (
-                <Trophy className="w-10 h-10 animate-bounce" />
-              ) : hung ? (
-                <Scale className="w-10 h-10" />
-              ) : (
-                <XCircle className="w-10 h-10" />
-              )}
-            </div>
-            <h1 className="text-3xl font-bold mb-2">
-              {won ? 'Case Won!' : hung ? 'Hung Jury' : 'Case Lost'}
-            </h1>
-            <p className="text-lg opacity-90">
-              {won ? 'Congratulations! You successfully defended your client.' :
-               hung ? 'The jury could not reach a unanimous decision.' :
-               'The jury found against your client.'}
+      <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100 flex items-center justify-center">
+        <div className="bg-white rounded-xl shadow-lg p-8 max-w-lg text-center border border-amber-200">
+          <div className="mb-6">
+            {gameWon ? (
+              <Trophy className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
+            ) : (
+              <Gavel className="w-16 h-16 text-gray-500 mx-auto mb-4" />
+            )}
+            <h1 className={`text-3xl font-bold mb-4 ${verdictColor}`}>{finalVerdict}</h1>
+            <p className="text-gray-600 mb-2">Final Score: {battleState.score > 0 ? '+' : ''}{battleState.score}</p>
+            <p className="text-sm text-gray-500 mb-6">
+              You completed all {battleState.totalPhases} phases of the trial
             </p>
           </div>
-
-          {/* Performance Analysis */}
-          <div className="p-8 space-y-6">
-            {/* Score and XP */}
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="bg-gray-50 rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-gray-800 mb-1">
-                  {battleState.score > 0 ? '+' : ''}{battleState.score}
-                </div>
-                <div className="text-sm text-gray-600">Final Score</div>
+          
+          {/* Performance Summary */}
+          <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
+            <h3 className="font-semibold text-gray-800 mb-2">Performance Summary</h3>
+            <div className="space-y-1 text-sm text-gray-600">
+              <div className="flex justify-between">
+                <span>Perfect Choices:</span>
+                <span>{battleState.perfectChoices}/{battleState.totalChoices}</span>
               </div>
-              <div className="bg-amber-50 rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-amber-600 mb-1">
-                  +{Math.floor(xpEarned)} XP
-                </div>
-                <div className="text-sm text-gray-600">Experience Earned</div>
+              <div className="flex justify-between">
+                <span>Accuracy:</span>
+                <span>{battleState.totalChoices > 0 ? Math.round((battleState.perfectChoices / battleState.totalChoices) * 100) : 0}%</span>
               </div>
-            </div>
-
-            {/* Choice Breakdown */}
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h3 className="font-semibold text-gray-800 mb-3">Performance Analysis</h3>
-              <div className="grid grid-cols-4 gap-2 text-center text-sm">
-                <div className="bg-green-100 rounded p-2">
-                  <div className="font-bold text-green-800">{perfectChoices}</div>
-                  <div className="text-green-600">Perfect</div>
-                </div>
-                <div className="bg-blue-100 rounded p-2">
-                  <div className="font-bold text-blue-800">{goodChoices}</div>
-                  <div className="text-blue-600">Good</div>
-                </div>
-                <div className="bg-orange-100 rounded p-2">
-                  <div className="font-bold text-orange-800">{weakChoices}</div>
-                  <div className="text-orange-600">Weak</div>
-                </div>
-                <div className="bg-red-100 rounded p-2">
-                  <div className="font-bold text-red-800">{badChoices}</div>
-                  <div className="text-red-600">Bad</div>
-                </div>
+              <div className="flex justify-between">
+                <span>Playing as:</span>
+                <span className="capitalize">{playerRole}</span>
               </div>
-              <div className="mt-3 text-center">
-                <span className="text-lg font-semibold text-gray-800">{accuracy.toFixed(1)}%</span>
-                <span className="text-sm text-gray-600 ml-2">Accuracy</span>
+              <div className="flex justify-between">
+                <span>Time Elapsed:</span>
+                <span>{formatTime(Math.floor((Date.now() - battleState.gameStartTime) / 1000))}</span>
               </div>
-            </div>
-
-            {/* Achievements */}
-            {newAchievements.length > 0 && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                  <Award className="w-5 h-5 text-yellow-600" />
-                  New Achievements Unlocked!
-                </h3>
-                <div className="space-y-2">
-                  {newAchievements.map((achievement) => (
-                    <div key={achievement.id} className="flex items-center gap-3 bg-white rounded p-3">
-                      <span className="text-2xl">{achievement.icon}</span>
-                      <div>
-                        <div className="font-medium text-gray-800">{achievement.name}</div>
-                        <div className="text-sm text-gray-600">{achievement.description}</div>
-                      </div>
-                      <div className="ml-auto text-sm font-medium text-yellow-600">
-                        +{achievement.xpReward} XP
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* What Went Wrong (for defeats) */}
-            {!won && !hung && worstChoice && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <h3 className="font-semibold text-gray-800 mb-3">What Went Wrong</h3>
-                <div className="space-y-2">
-                  <div className="text-sm text-gray-600">
-                    <strong>Weakest Performance:</strong> {phaseNames[worstChoice.phase]}
-                  </div>
-                  <div className="bg-white rounded p-3 border-l-4 border-red-500">
-                    <div className="text-sm font-medium text-gray-800 mb-1">
-                      {worstChoice.choice.strategyType}
-                    </div>
-                    <div className="text-sm text-gray-600 mb-2">
-                      {worstChoice.choice.text}
-                    </div>
-                    <div className="text-xs text-red-600">
-                      {worstChoice.choice.explanation}
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="mt-4 bg-blue-50 rounded p-3">
-                  <h4 className="font-medium text-blue-800 mb-2">Tips for Improvement:</h4>
-                  <ul className="text-sm text-blue-700 space-y-1">
-                    <li>• Focus on legal fundamentals and evidence-based arguments</li>
-                    <li>• Consider the timing and appropriateness of different strategies</li>
-                    <li>• Practice identifying the strongest legal position for each phase</li>
-                    <li>• Study successful courtroom advocacy techniques</li>
-                  </ul>
-                </div>
-              </div>
-            )}
-
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button 
-                onClick={() => setShowStatsModal(true)}
-                variant="outline"
-                className="flex-1 border-amber-300 text-amber-700 hover:bg-amber-50"
-              >
-                <Trophy className="w-4 h-4 mr-2" />
-                View Stats
-              </Button>
-              <Button 
-                onClick={() => setShowReplay(true)}
-                variant="outline"
-                className="flex-1"
-              >
-                <Eye className="w-4 h-4 mr-2" />
-                Review Choices
-              </Button>
-              <Button 
-                onClick={() => setShowLeaderboard(true)}
-                variant="outline"
-                className="flex-1"
-              >
-                <BarChart3 className="w-4 h-4 mr-2" />
-                Leaderboard
-              </Button>
-            </div>
-            
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Link href={`/courtroom-battle/case-briefing/${caseId}`} className="flex-1">
-                <Button variant="outline" className="w-full">
-                  <RotateCcw className="w-4 h-4 mr-2" />
-                  Try Again
-                </Button>
-              </Link>
-              <Link href="/courtroom-battle" className="flex-1">
-                <Button className="w-full bg-amber-600 hover:bg-amber-700">
-                  <Home className="w-4 h-4 mr-2" />
-                  Choose New Case
-                </Button>
-              </Link>
             </div>
           </div>
+          
+          <div className="space-y-3">
+            <Button 
+              onClick={handleRetry}
+              className="w-full bg-amber-600 hover:bg-amber-700"
+            >
+              <RotateCcw className="w-4 h-4 mr-2" />
+              Try Again
+            </Button>
+            <Button 
+              onClick={handleNewCase}
+              variant="outline" 
+              className="w-full"
+            >
+              Choose New Case
+            </Button>
+          </div>
         </div>
-
-        {/* Modals */}
-        {showStatsModal && (
-          <PlayerStatsComponent onClose={() => setShowStatsModal(false)} />
-        )}
-        
-        {showReplay && (
-          <CaseReplay
-            caseTitle={caseData.title}
-            choices={replayChoices}
-            finalScore={battleState.score}
-            isVisible={showReplay}
-            onClose={() => setShowReplay(false)}
-            onReplay={() => router.push(`/courtroom-battle/case-briefing/${caseId}`)}
-          />
-        )}
-        
-        {showLeaderboard && (
-          <LeaderboardComponent
-            isVisible={showLeaderboard}
-            onClose={() => setShowLeaderboard(false)}
-          />
-        )}
       </div>
     );
   }
@@ -999,24 +820,6 @@ export default function BattlePage() {
                 <Scale className="w-8 h-8 text-amber-600" />
                 <h1 className="text-2xl font-bold text-gray-800">{caseData.title}</h1>
               </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={toggleSound}
-                  className="border-gray-300"
-                >
-                  {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowLeaderboard(true)}
-                  className="border-gray-300"
-                >
-                  <BarChart3 className="w-4 h-4" />
-                </Button>
-              </div>
             </div>
           </div>
         </div>
@@ -1044,22 +847,8 @@ export default function BattlePage() {
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-4">
-              <div className="text-sm text-gray-600">
-                Playing as: <span className="font-medium capitalize text-amber-600">{playerRole}</span>
-              </div>
-              {battleState.gamePhase === 'player-choosing' && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowHintSystem(true)}
-                  className="border-yellow-300 text-yellow-700 hover:bg-yellow-50"
-                  disabled={battleState.score < 5}
-                >
-                  <Lightbulb className="w-4 h-4 mr-2" />
-                  Hints ({battleState.hintsUsed.length})
-                </Button>
-              )}
+            <div className="text-sm text-gray-600">
+              Playing as: <span className="font-medium capitalize text-amber-600">{playerRole}</span>
             </div>
           </div>
           
@@ -1082,11 +871,6 @@ export default function BattlePage() {
             <div className="text-center mt-2">
               <span className="text-sm font-medium text-gray-700">
                 Jury Favor: {battleState.score > 0 ? '+' : ''}{battleState.score}
-                {battleState.totalHintCost > 0 && (
-                  <span className="text-xs text-yellow-600 ml-2">
-                    (Hints: -{battleState.totalHintCost})
-                  </span>
-                )}
               </span>
             </div>
           </div>
@@ -1141,7 +925,9 @@ export default function BattlePage() {
                 </div>
                 
                 <div className="text-center">
-                  <p className="text-sm text-gray-600">Advancing to next phase...</p>
+                  <p className="text-sm text-gray-600">
+                    {battleState.phaseNumber >= battleState.totalPhases ? 'Calculating final verdict...' : 'Advancing to next phase...'}
+                  </p>
                   <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
                     <div className="bg-amber-600 h-2 rounded-full animate-pulse" style={{ width: '70%' }}></div>
                   </div>
@@ -1219,13 +1005,12 @@ export default function BattlePage() {
             </div>
             
             <div className="space-y-4">
-              {/* Gandhi's Avatar with Enhanced Expression */}
-              <div className="flex justify-center">
-                <GandhiAvatar 
-                  mood={battleState.gandhiMood}
-                  speaking={battleState.gamePhase === 'gandhi-speaking'}
-                  size="large"
-                />
+              {/* Gandhi's Avatar with Expression */}
+              <div className="relative w-32 h-32 bg-gradient-to-br from-amber-100 to-orange-200 rounded-full mx-auto flex items-center justify-center">
+                <div className="text-4xl">{getGandhiMoodEmoji(battleState.gandhiMood)}</div>
+                <div className={`absolute -bottom-2 px-2 py-1 rounded-full text-xs font-medium ${getGandhiMoodColor(battleState.gandhiMood)}`}>
+                  {battleState.gandhiMood}
+                </div>
               </div>
               
               {/* Gandhi's Speech Bubble */}
@@ -1247,35 +1032,13 @@ export default function BattlePage() {
                   <div className={`w-2 h-2 rounded-full ${
                     battleState.gamePhase === 'gandhi-speaking' ? 'bg-green-500 animate-pulse' : 'bg-gray-400'
                   }`}></div>
-                  {battleState.gamePhase === 'gandhi-speaking' ? 'Presenting' : 
-                   battleState.gamePhase === 'player-choosing' ? 'Listening' : 'Waiting'}
+                  {battleState.gamePhase === 'gandhi-speaking' ? 'Presenting' : 'Waiting'}
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Modals */}
-      <HintSystem
-        currentPhase={battleState.currentPhase}
-        onUseHint={handleUseHint}
-        usedHints={battleState.hintsUsed}
-        currentScore={battleState.score}
-        isVisible={showHintSystem}
-        onClose={() => setShowHintSystem(false)}
-      />
-
-      {showStatsModal && (
-        <PlayerStatsComponent onClose={() => setShowStatsModal(false)} />
-      )}
-
-      {showLeaderboard && (
-        <LeaderboardComponent
-          isVisible={showLeaderboard}
-          onClose={() => setShowLeaderboard(false)}
-        />
-      )}
     </div>
   );
 }
