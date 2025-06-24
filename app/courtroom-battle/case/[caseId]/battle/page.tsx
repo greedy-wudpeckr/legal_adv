@@ -72,6 +72,65 @@ interface BattleState {
   gameCompleted: boolean;
 }
 
+// Subtitle component for Gandhi's speech
+interface SubtitleProps {
+  text: string;
+  isVisible: boolean;
+  duration?: number;
+}
+
+function GandhiSubtitle({ text, isVisible, duration = 4000 }: SubtitleProps) {
+  const [currentWordIndex, setCurrentWordIndex] = useState(0);
+  const [words, setWords] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (text.trim()) {
+      const wordArray = text.trim().split(/\s+/);
+      setWords(wordArray);
+      setCurrentWordIndex(0);
+    }
+  }, [text]);
+
+  useEffect(() => {
+    if (!isVisible || words.length === 0) return;
+
+    const wordInterval = duration / words.length;
+    
+    const timer = setInterval(() => {
+      setCurrentWordIndex(prev => {
+        const nextIndex = prev + 1;
+        if (nextIndex >= words.length) {
+          clearInterval(timer);
+          return words.length;
+        }
+        return nextIndex;
+      });
+    }, wordInterval);
+
+    return () => clearInterval(timer);
+  }, [words, duration, isVisible]);
+
+  if (!isVisible || !text.trim()) {
+    return null;
+  }
+
+  const displayedWords = words.slice(0, currentWordIndex + 1);
+  const displayText = displayedWords.join(' ');
+
+  return (
+    <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-40 max-w-4xl mx-auto px-4">
+      <div className="bg-black/80 backdrop-blur-sm px-6 py-3 rounded-lg">
+        <p className="text-white text-center text-lg font-medium leading-relaxed">
+          {displayText}
+          {currentWordIndex < words.length - 1 && (
+            <span className="inline-block w-1 h-5 bg-white ml-1 animate-pulse" />
+          )}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 const phaseNames = {
   'opening-statements': 'Opening Statements',
   'evidence-presentation': 'Evidence Presentation',
@@ -1039,6 +1098,15 @@ export default function BattlePage() {
           </div>
         </div>
       </div>
+
+      {/* Gandhi Subtitles - YouTube style */}
+      <GandhiSubtitle 
+        text={battleState.gamePhase === 'gandhi-speaking' ? battleState.gandhiArgument : 
+              battleState.gamePhase === 'showing-results' && battleState.lastChoice ? battleState.lastChoice.gandhiResponse : ''}
+        isVisible={battleState.gamePhase === 'gandhi-speaking' || 
+                  (battleState.gamePhase === 'showing-results' && battleState.lastChoice !== null)}
+        duration={battleState.gamePhase === 'gandhi-speaking' ? 4000 : 3000}
+      />
     </div>
   );
 }
