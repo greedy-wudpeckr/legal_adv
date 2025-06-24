@@ -1,21 +1,65 @@
 "use client"
 
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 
 interface SpeechSubtitleProps {
   text: string;
   isVisible?: boolean;
   className?: string;
+  duration?: number; // Duration in milliseconds for the entire text
+  onComplete?: () => void; // Callback when all words are displayed
 }
 
 export default function SpeechSubtitle({ 
   text, 
   isVisible = true, 
-  className 
+  className,
+  duration = 3000, // Default 3 seconds
+  onComplete
 }: SpeechSubtitleProps) {
+  const [currentWordIndex, setCurrentWordIndex] = useState(0);
+  const [words, setWords] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (text.trim()) {
+      const wordArray = text.trim().split(/\s+/);
+      setWords(wordArray);
+      setCurrentWordIndex(0);
+    }
+  }, [text]);
+
+  useEffect(() => {
+    if (!isVisible || words.length === 0) return;
+
+    const wordInterval = duration / words.length;
+    
+    const timer = setInterval(() => {
+      setCurrentWordIndex(prev => {
+        const nextIndex = prev + 1;
+        
+        // If we've shown all words, call onComplete and stop
+        if (nextIndex >= words.length) {
+          clearInterval(timer);
+          if (onComplete) {
+            setTimeout(onComplete, 500); // Small delay before calling complete
+          }
+          return words.length; // Keep showing all words
+        }
+        
+        return nextIndex;
+      });
+    }, wordInterval);
+
+    return () => clearInterval(timer);
+  }, [words, duration, isVisible, onComplete]);
+
   if (!isVisible || !text.trim()) {
     return null;
   }
+
+  const displayedWords = words.slice(0, currentWordIndex + 1);
+  const displayText = displayedWords.join(' ');
 
   return (
     <div className={cn(
@@ -26,9 +70,29 @@ export default function SpeechSubtitle({
       "transition-all duration-300 ease-in-out",
       className
     )}>
-      <p className="text-white text-center text-lg leading-relaxed font-medium">
-        {text}
+      <p className="text-white text-center text-lg leading-relaxed font-medium min-h-[1.5em]">
+        {displayText}
+        {currentWordIndex < words.length - 1 && (
+          <span className="inline-block w-2 h-6 bg-amber-400 ml-1 animate-pulse" />
+        )}
       </p>
+      
+      {/* Progress indicator */}
+      {words.length > 0 && (
+        <div className="mt-3 w-full bg-gray-600/50 rounded-full h-1">
+          <div 
+            className="bg-amber-400 h-1 rounded-full transition-all duration-200 ease-out"
+            style={{ 
+              width: `${((currentWordIndex + 1) / words.length) * 100}%` 
+            }}
+          />
+        </div>
+      )}
+      
+      {/* Word counter for debugging (can be removed) */}
+      <div className="absolute top-1 right-2 text-xs text-amber-300/70">
+        {currentWordIndex + 1}/{words.length}
+      </div>
       
       {/* Amber accent border */}
       <div className="absolute inset-0 rounded-lg border border-amber-400/20 pointer-events-none" />

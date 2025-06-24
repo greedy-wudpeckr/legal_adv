@@ -20,9 +20,10 @@ type CaseQueryForm = z.infer<typeof caseQuerySchema>;
 interface Props {
   setSpeaking: Dispatch<SetStateAction<boolean>>;
   setCurrentSubtitle?: Dispatch<SetStateAction<string>>;
+  setSubtitleDuration?: Dispatch<SetStateAction<number>>;
 }
 
-export default function CaseQueryForm({ setSpeaking, setCurrentSubtitle }: Props) {
+export default function CaseQueryForm({ setSpeaking, setCurrentSubtitle, setSubtitleDuration }: Props) {
   const { toast } = useToast();
 
   const {
@@ -34,11 +35,21 @@ export default function CaseQueryForm({ setSpeaking, setCurrentSubtitle }: Props
     resolver: zodResolver(caseQuerySchema),
   });
 
+  const calculateDuration = (text: string): number => {
+    // Calculate duration based on text length
+    // Roughly 150-200 words per minute for comfortable reading
+    const words = text.trim().split(/\s+/).length;
+    const wordsPerSecond = 2.5; // Comfortable reading pace
+    return Math.max(2000, words * (1000 / wordsPerSecond)); // Minimum 2 seconds
+  };
+
   const onSubmit = async (data: CaseQueryForm) => {
     try {
       // Update subtitle to show the user's question
-      if (setCurrentSubtitle) {
-        setCurrentSubtitle(`Question: ${data.caseQuery}`);
+      if (setCurrentSubtitle && setSubtitleDuration) {
+        const questionText = `Question: ${data.caseQuery}`;
+        setCurrentSubtitle(questionText);
+        setSubtitleDuration(calculateDuration(questionText));
       }
 
       // Get Gemini response
@@ -52,8 +63,9 @@ export default function CaseQueryForm({ setSpeaking, setCurrentSubtitle }: Props
       const answer: string = result.text || "No response received.";
 
       // Update subtitle with the AI response
-      if (setCurrentSubtitle) {
+      if (setCurrentSubtitle && setSubtitleDuration) {
         setCurrentSubtitle(answer);
+        setSubtitleDuration(calculateDuration(answer));
       }
 
       // Call ElevenLabs TTS API
@@ -74,14 +86,18 @@ export default function CaseQueryForm({ setSpeaking, setCurrentSubtitle }: Props
       audio.onended = () => {
         setSpeaking(false);
         // Reset subtitle after speech ends
-        if (setCurrentSubtitle) {
-          setCurrentSubtitle("Ask me another legal question...");
+        if (setCurrentSubtitle && setSubtitleDuration) {
+          setTimeout(() => {
+            setCurrentSubtitle("Ask me another legal question...");
+            setSubtitleDuration(2500);
+          }, 1000);
         }
       };
       audio.onerror = () => {
         setSpeaking(false);
-        if (setCurrentSubtitle) {
+        if (setCurrentSubtitle && setSubtitleDuration) {
           setCurrentSubtitle("Error playing audio response");
+          setSubtitleDuration(2000);
         }
       };
 
@@ -91,8 +107,9 @@ export default function CaseQueryForm({ setSpeaking, setCurrentSubtitle }: Props
     } catch (error) {
       console.error("Submission error:", error);
       setSpeaking(false);
-      if (setCurrentSubtitle) {
+      if (setCurrentSubtitle && setSubtitleDuration) {
         setCurrentSubtitle("Error: Failed to get response");
+        setSubtitleDuration(2000);
       }
       toast({
         title: "Error",

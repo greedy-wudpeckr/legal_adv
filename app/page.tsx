@@ -13,6 +13,15 @@ import { Canvas } from '@react-three/fiber';
 export default function Home() {
   const [speaking, setSpeaking] = useState(false);
   const [currentSubtitle, setCurrentSubtitle] = useState("Welcome to ApnaWakeel.ai - Your AI Legal Advisor");
+  const [subtitleDuration, setSubtitleDuration] = useState(3000);
+
+  const handleSubtitleComplete = () => {
+    // Reset to welcome message after subtitle completes
+    setTimeout(() => {
+      setCurrentSubtitle("Ask me a legal question to get started...");
+      setSubtitleDuration(2000);
+    }, 1000);
+  };
 
   return (
     <div className="relative bg-cover bg-center w-full h-screen"
@@ -31,11 +40,17 @@ export default function Home() {
       <SpeechSubtitle 
         text={currentSubtitle}
         isVisible={true}
+        duration={subtitleDuration}
+        onComplete={handleSubtitleComplete}
       />
 
       {/* Form positioned at bottom */}
       <div className="right-0 bottom-0 left-0 absolute bg-gradient-to-t from-black/80 to-transparent p-6">
-        <CaseQueryForm setSpeaking={setSpeaking} />
+        <CaseQueryForm 
+          setSpeaking={setSpeaking} 
+          setCurrentSubtitle={setCurrentSubtitle}
+          setSubtitleDuration={setSubtitleDuration}
+        />
       </div>
 
       <Toaster />
