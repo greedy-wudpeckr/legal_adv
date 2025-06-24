@@ -34,7 +34,7 @@ export const PHASE_HINTS: Record<string, Hint[]> = {
       phase: 'opening-statements',
       text: 'Establish the burden of proof early. For defense, emphasize "reasonable doubt" - for prosecution, "beyond reasonable doubt".',
       cost: 10,
-      category: timing'
+      category: 'timing'
     }
   ],
   'evidence-presentation': [
