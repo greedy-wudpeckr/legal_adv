@@ -19,7 +19,17 @@ import {
   FileText,
   Users,
   Eye,
-  Mic
+  Mic,
+  Trophy,
+  Star,
+  RotateCcw,
+  Target,
+  Award,
+  BookOpen,
+  Lightbulb,
+  ThumbsUp,
+  ThumbsDown,
+  Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getCaseById } from '@/data/sample-cases';
@@ -61,6 +71,15 @@ interface BattleState {
     witnessesExamined?: string[];
     keyPoints?: string[];
   };
+  choiceHistory: {
+    phase: BattlePhase;
+    choice: ResponseOption;
+    effectiveness: EffectivenessLevel;
+  }[];
+  perfectChoices: number;
+  goodChoices: number;
+  weakChoices: number;
+  badChoices: number;
 }
 
 const phaseNames = {
@@ -411,7 +430,12 @@ export default function BattlePage() {
       evidencePresented: [],
       witnessesExamined: [],
       keyPoints: []
-    }
+    },
+    choiceHistory: [],
+    perfectChoices: 0,
+    goodChoices: 0,
+    weakChoices: 0,
+    badChoices: 0
   });
 
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
@@ -549,6 +573,20 @@ export default function BattlePage() {
       updatedContext.witnessesExamined = [...(updatedContext.witnessesExamined || []), selectedResponse.strategyType];
     }
 
+    // Update choice statistics
+    const newChoiceHistory = [...battleState.choiceHistory, {
+      phase: battleState.currentPhase,
+      choice: selectedResponse,
+      effectiveness: selectedResponse.effectiveness
+    }];
+
+    const newStats = {
+      perfectChoices: battleState.perfectChoices + (selectedResponse.effectiveness === 'perfect' ? 1 : 0),
+      goodChoices: battleState.goodChoices + (selectedResponse.effectiveness === 'good' ? 1 : 0),
+      weakChoices: battleState.weakChoices + (selectedResponse.effectiveness === 'weak' ? 1 : 0),
+      badChoices: battleState.badChoices + (selectedResponse.effectiveness === 'bad' ? 1 : 0)
+    };
+
     setBattleState(prev => ({
       ...prev,
       score: prev.score + selectedResponse.scoreChange,
@@ -561,7 +599,9 @@ export default function BattlePage() {
       gamePhase: 'showing-results',
       flashEffect,
       gandhiMood,
-      phaseContext: updatedContext
+      phaseContext: updatedContext,
+      choiceHistory: newChoiceHistory,
+      ...newStats
     }));
 
     // Auto-advance after showing results
@@ -632,39 +672,269 @@ export default function BattlePage() {
   }
 
   if (battleState.gamePhase === 'game-over') {
-    const finalVerdict = battleState.score > 20 ? 'Defense Wins!' : 
-                        battleState.score < -20 ? 'Prosecution Wins!' : 
-                        'Hung Jury!';
-    const verdictColor = battleState.score > 20 ? 'text-green-600' : 
-                        battleState.score < -20 ? 'text-red-600' : 
-                        'text-gray-600';
+    const finalScore = battleState.score;
+    const isVictory = finalScore > 20;
+    const isDefeat = finalScore < -20;
+    const isHungJury = !isVictory && !isDefeat;
     
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100 flex items-center justify-center">
-        <div className="bg-white rounded-xl shadow-lg p-8 max-w-lg text-center border border-amber-200">
-          <Gavel className="w-16 h-16 text-amber-600 mx-auto mb-4" />
-          <h1 className={`text-3xl font-bold mb-4 ${verdictColor}`}>{finalVerdict}</h1>
-          <p className="text-gray-600 mb-2">Final Score: {battleState.score > 0 ? '+' : ''}{battleState.score}</p>
-          <p className="text-sm text-gray-500 mb-6">
-            You completed all {battleState.totalPhases} phases of the trial
-          </p>
-          
-          {/* Phase Summary */}
-          <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
-            <h3 className="font-semibold text-gray-800 mb-2">Trial Summary</h3>
-            <div className="space-y-1 text-sm text-gray-600">
-              <div>Evidence Strategies: {battleState.phaseContext.evidencePresented?.length || 0}</div>
-              <div>Witnesses Examined: {battleState.phaseContext.witnessesExamined?.length || 0}</div>
-              <div>Playing as: {playerRole.charAt(0).toUpperCase() + playerRole.slice(1)}</div>
+    const totalChoices = battleState.perfectChoices + battleState.goodChoices + battleState.weakChoices + battleState.badChoices;
+    const accuracy = totalChoices > 0 ? Math.round(((battleState.perfectChoices + battleState.goodChoices) / totalChoices) * 100) : 0;
+    
+    // Calculate XP and achievements
+    const baseXP = caseData.pointsAvailable;
+    const scoreMultiplier = Math.max(0.1, (finalScore + 100) / 200); // 0.1 to 1.0 based on score
+    const accuracyBonus = accuracy > 75 ? 200 : accuracy > 50 ? 100 : 0;
+    const perfectChoiceBonus = battleState.perfectChoices * 50;
+    const totalXP = Math.round(baseXP * scoreMultiplier + accuracyBonus + perfectChoiceBonus);
+    
+    // Determine achievements
+    const achievements = [];
+    if (battleState.perfectChoices >= 3) achievements.push({ name: "Perfect Strategist", icon: "🎯", description: "Made 3+ perfect choices" });
+    if (accuracy >= 75) achievements.push({ name: "Legal Eagle", icon: "🦅", description: "75%+ choice accuracy" });
+    if (isVictory && finalScore > 50) achievements.push({ name: "Courtroom Dominator", icon: "👑", description: "Decisive victory" });
+    if (battleState.perfectChoices === totalChoices) achievements.push({ name: "Flawless Victory", icon: "💎", description: "All perfect choices" });
+    
+    // Victory Screen
+    if (isVictory) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center">
+          <div className="bg-white rounded-xl shadow-2xl p-8 max-w-2xl w-full mx-4 border border-green-200">
+            {/* Victory Header */}
+            <div className="text-center mb-8">
+              <div className="relative">
+                <Trophy className="w-20 h-20 text-yellow-500 mx-auto mb-4 animate-bounce" />
+                <div className="absolute -top-2 -right-2 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                  <CheckCircle className="w-5 h-5 text-white" />
+                </div>
+              </div>
+              <h1 className="text-4xl font-bold text-green-600 mb-2">Case Won!</h1>
+              <p className="text-xl text-gray-600">🎉 Congratulations! You successfully defended your client!</p>
+            </div>
+
+            {/* Score Summary */}
+            <div className="bg-green-50 rounded-lg p-6 mb-6 border border-green-200">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                <Target className="w-5 h-5 text-green-600" />
+                Final Results
+              </h3>
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-green-600">+{finalScore}</div>
+                  <div className="text-sm text-gray-600">Final Score</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-blue-600">{accuracy}%</div>
+                  <div className="text-sm text-gray-600">Accuracy</div>
+                </div>
+              </div>
+              
+              {/* Choice Breakdown */}
+              <div className="grid grid-cols-4 gap-2 text-center text-sm">
+                <div className="bg-green-100 rounded p-2">
+                  <div className="font-bold text-green-800">{battleState.perfectChoices}</div>
+                  <div className="text-green-600">Perfect</div>
+                </div>
+                <div className="bg-blue-100 rounded p-2">
+                  <div className="font-bold text-blue-800">{battleState.goodChoices}</div>
+                  <div className="text-blue-600">Good</div>
+                </div>
+                <div className="bg-orange-100 rounded p-2">
+                  <div className="font-bold text-orange-800">{battleState.weakChoices}</div>
+                  <div className="text-orange-600">Weak</div>
+                </div>
+                <div className="bg-red-100 rounded p-2">
+                  <div className="font-bold text-red-800">{battleState.badChoices}</div>
+                  <div className="text-red-600">Bad</div>
+                </div>
+              </div>
+            </div>
+
+            {/* XP and Achievements */}
+            <div className="bg-yellow-50 rounded-lg p-6 mb-6 border border-yellow-200">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                <Zap className="w-5 h-5 text-yellow-600" />
+                Rewards Earned
+              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-gray-700">Experience Points:</span>
+                <span className="text-2xl font-bold text-yellow-600">+{totalXP} XP</span>
+              </div>
+              
+              {achievements.length > 0 && (
+                <div>
+                  <h4 className="font-medium text-gray-800 mb-2">Achievements Unlocked:</h4>
+                  <div className="space-y-2">
+                    {achievements.map((achievement, index) => (
+                      <div key={index} className="flex items-center gap-3 bg-white rounded p-3 border border-yellow-300">
+                        <span className="text-2xl">{achievement.icon}</span>
+                        <div>
+                          <div className="font-medium text-gray-800">{achievement.name}</div>
+                          <div className="text-sm text-gray-600">{achievement.description}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-3">
+              <Link href="/courtroom-battle">
+                <Button className="w-full bg-green-600 hover:bg-green-700 text-white py-3 text-lg">
+                  <Star className="w-5 h-5 mr-2" />
+                  Choose Next Case
+                </Button>
+              </Link>
+              <Link href={`/courtroom-battle/case-briefing/${caseId}`}>
+                <Button variant="outline" className="w-full border-green-300 text-green-700 hover:bg-green-50 py-3">
+                  <RotateCcw className="w-5 h-5 mr-2" />
+                  Play Again
+                </Button>
+              </Link>
             </div>
           </div>
-          
+        </div>
+      );
+    }
+
+    // Defeat Screen
+    if (isDefeat) {
+      // Analyze what went wrong
+      const weakestPhase = battleState.choiceHistory.reduce((worst, current) => {
+        return current.choice.scoreChange < worst.choice.scoreChange ? current : worst;
+      }, battleState.choiceHistory[0]);
+
+      const improvementTips = [
+        "Focus on legal fundamentals - burden of proof is key in defense cases",
+        "Consider the jury's perspective when choosing your strategy",
+        "Evidence challenges are most effective when systematic and specific",
+        "Emotional appeals work better in closing arguments than opening statements"
+      ];
+
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-red-50 to-rose-100 flex items-center justify-center">
+          <div className="bg-white rounded-xl shadow-2xl p-8 max-w-2xl w-full mx-4 border border-red-200">
+            {/* Defeat Header */}
+            <div className="text-center mb-8">
+              <div className="relative">
+                <XCircle className="w-20 h-20 text-red-500 mx-auto mb-4" />
+                <div className="absolute -top-2 -right-2 w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
+                  <AlertCircle className="w-5 h-5 text-white" />
+                </div>
+              </div>
+              <h1 className="text-4xl font-bold text-red-600 mb-2">Case Lost</h1>
+              <p className="text-xl text-gray-600">The jury found against your client. Let's learn from this experience.</p>
+            </div>
+
+            {/* Analysis */}
+            <div className="bg-red-50 rounded-lg p-6 mb-6 border border-red-200">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                <ThumbsDown className="w-5 h-5 text-red-600" />
+                What Went Wrong
+              </h3>
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-red-600">{finalScore}</div>
+                  <div className="text-sm text-gray-600">Final Score</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-orange-600">{accuracy}%</div>
+                  <div className="text-sm text-gray-600">Accuracy</div>
+                </div>
+              </div>
+              
+              {weakestPhase && (
+                <div className="bg-white rounded p-4 border border-red-300">
+                  <h4 className="font-medium text-gray-800 mb-2">Weakest Performance:</h4>
+                  <div className="text-sm text-gray-600">
+                    <div className="font-medium">{phaseNames[weakestPhase.phase]}</div>
+                    <div className="text-red-600 mt-1">"{weakestPhase.choice.text}"</div>
+                    <div className="text-gray-500 mt-1">{weakestPhase.choice.explanation}</div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Improvement Tips */}
+            <div className="bg-blue-50 rounded-lg p-6 mb-6 border border-blue-200">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                <Lightbulb className="w-5 h-5 text-blue-600" />
+                Tips for Improvement
+              </h3>
+              <div className="space-y-3">
+                {improvementTips.slice(0, 3).map((tip, index) => (
+                  <div key={index} className="flex items-start gap-3">
+                    <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-blue-600 text-sm font-medium">{index + 1}</span>
+                    </div>
+                    <span className="text-gray-700">{tip}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Study Resources */}
+            <div className="bg-amber-50 rounded-lg p-6 mb-6 border border-amber-200">
+              <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-amber-600" />
+                Recommended Study
+              </h3>
+              <div className="text-sm text-gray-600 space-y-2">
+                <div>• Review the case evidence more carefully before starting</div>
+                <div>• Practice with easier cases to build fundamentals</div>
+                <div>• Focus on {phaseNames[weakestPhase?.phase || 'opening-statements']} strategies</div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-3">
+              <Link href={`/courtroom-battle/case-briefing/${caseId}`}>
+                <Button className="w-full bg-red-600 hover:bg-red-700 text-white py-3 text-lg">
+                  <RotateCcw className="w-5 h-5 mr-2" />
+                  Try Again
+                </Button>
+              </Link>
+              <Link href="/courtroom-battle">
+                <Button variant="outline" className="w-full border-red-300 text-red-700 hover:bg-red-50 py-3">
+                  <ArrowLeft className="w-5 h-5 mr-2" />
+                  Choose Different Case
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Hung Jury Screen
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-slate-100 flex items-center justify-center">
+        <div className="bg-white rounded-xl shadow-2xl p-8 max-w-2xl w-full mx-4 border border-gray-200">
+          <div className="text-center mb-8">
+            <Gavel className="w-20 h-20 text-gray-500 mx-auto mb-4" />
+            <h1 className="text-4xl font-bold text-gray-600 mb-2">Hung Jury</h1>
+            <p className="text-xl text-gray-600">The jury couldn't reach a unanimous decision. A mixed result.</p>
+          </div>
+
+          <div className="bg-gray-50 rounded-lg p-6 mb-6">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-gray-600 mb-2">{finalScore}</div>
+              <div className="text-gray-600">Final Score - Neither side convinced the jury</div>
+            </div>
+          </div>
+
           <div className="space-y-3">
             <Link href={`/courtroom-battle/case-briefing/${caseId}`}>
-              <Button className="w-full bg-amber-600 hover:bg-amber-700">Try Again</Button>
+              <Button className="w-full bg-gray-600 hover:bg-gray-700 text-white py-3 text-lg">
+                <RotateCcw className="w-5 h-5 mr-2" />
+                Retry for Better Result
+              </Button>
             </Link>
             <Link href="/courtroom-battle">
-              <Button variant="outline" className="w-full">Choose New Case</Button>
+              <Button variant="outline" className="w-full py-3">
+                Choose New Case
+              </Button>
             </Link>
           </div>
         </div>
