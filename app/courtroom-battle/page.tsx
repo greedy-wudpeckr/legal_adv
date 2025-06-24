@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Scale, Gavel, ArrowLeft } from 'lucide-react';
+import { Scale, Gavel, ArrowLeft, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { sampleCases } from '@/data/sample-cases';
 
 const caseCategories = [
   { id: 'murder', name: 'Murder', description: 'Homicide and related charges', color: 'bg-red-100 border-red-300 text-red-800' },
@@ -14,6 +15,10 @@ const caseCategories = [
 
 export default function CourtroomBattle() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  const availableCases = sampleCases.filter(caseItem => 
+    selectedCategory ? caseItem.category === selectedCategory : true
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
@@ -45,29 +50,11 @@ export default function CourtroomBattle() {
           </p>
         </div>
 
-        {/* Start New Case Section */}
-        <div className="bg-white rounded-xl shadow-lg p-8 mb-8 border border-amber-200">
-          <div className="text-center mb-6">
-            <h2 className="text-2xl font-semibold text-gray-800 mb-2">Ready for a Challenge?</h2>
-            <p className="text-gray-600">Choose a case category and put your legal knowledge to the test</p>
-          </div>
-          
-          <div className="flex justify-center">
-            <Button 
-              size="lg"
-              className="bg-amber-600 hover:bg-amber-700 text-white px-8 py-3 text-lg font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
-            >
-              <Gavel className="w-5 h-5 mr-2" />
-              Start New Case
-            </Button>
-          </div>
-        </div>
-
         {/* Case Categories */}
-        <div className="bg-white rounded-xl shadow-lg p-8 border border-amber-200">
+        <div className="bg-white rounded-xl shadow-lg p-8 mb-8 border border-amber-200">
           <h3 className="text-2xl font-semibold text-gray-800 mb-6 text-center">Case Categories</h3>
           
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid md:grid-cols-2 gap-6 mb-6">
             {caseCategories.map((category) => (
               <div
                 key={category.id}
@@ -76,27 +63,81 @@ export default function CourtroomBattle() {
                     ? `${category.color} shadow-md scale-105` 
                     : 'bg-gray-50 border-gray-200 hover:border-amber-300'
                 }`}
-                onClick={() => setSelectedCategory(category.id)}
+                onClick={() => setSelectedCategory(selectedCategory === category.id ? null : category.id)}
               >
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="text-xl font-semibold">{category.name}</h4>
                   <Scale className="w-6 h-6 text-amber-600" />
                 </div>
                 <p className="text-sm opacity-80">{category.description}</p>
-                
-                {selectedCategory === category.id && (
-                  <div className="mt-4 pt-4 border-t border-current border-opacity-20">
-                    <Button 
-                      size="sm"
-                      className="bg-amber-600 hover:bg-amber-700 text-white"
-                    >
-                      Start {category.name} Case
-                    </Button>
-                  </div>
-                )}
               </div>
             ))}
           </div>
+
+          {selectedCategory && (
+            <div className="text-center">
+              <Button 
+                onClick={() => setSelectedCategory(null)}
+                variant="outline"
+                className="border-amber-300 text-amber-700 hover:bg-amber-50"
+              >
+                Show All Categories
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* Available Cases */}
+        <div className="bg-white rounded-xl shadow-lg p-8 border border-amber-200">
+          <h3 className="text-2xl font-semibold text-gray-800 mb-6 text-center">
+            {selectedCategory ? `${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)} Cases` : 'Available Cases'}
+          </h3>
+          
+          <div className="space-y-6">
+            {availableCases.map((caseItem) => (
+              <div key={caseItem.caseId} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <h4 className="text-xl font-semibold text-gray-800 mb-2">{caseItem.title}</h4>
+                    <p className="text-gray-600 mb-3">{caseItem.description}</p>
+                    <div className="flex items-center gap-4">
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        caseItem.difficulty === 'beginner' ? 'bg-green-100 text-green-800' :
+                        caseItem.difficulty === 'intermediate' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {caseItem.difficulty.charAt(0).toUpperCase() + caseItem.difficulty.slice(1)}
+                      </span>
+                      <span className="text-sm text-gray-600">{caseItem.timeLimit} minutes</span>
+                      <span className="text-sm text-gray-600">{caseItem.pointsAvailable} points</span>
+                    </div>
+                  </div>
+                  <Link href={`/courtroom-battle/case-briefing/${caseItem.caseId}`}>
+                    <Button className="bg-amber-600 hover:bg-amber-700 text-white">
+                      <Play className="w-4 h-4 mr-2" />
+                      Start Case
+                    </Button>
+                  </Link>
+                </div>
+                
+                <div className="grid md:grid-cols-2 gap-4 text-sm text-gray-600">
+                  <div>
+                    <strong>Evidence:</strong> {caseItem.evidenceList.length} pieces
+                  </div>
+                  <div>
+                    <strong>Witnesses:</strong> {caseItem.witnesses.length} available
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {availableCases.length === 0 && (
+            <div className="text-center py-8">
+              <p className="text-gray-600">No cases available for this category yet.</p>
+              <p className="text-sm text-gray-500 mt-2">More cases coming soon!</p>
+            </div>
+          )}
         </div>
 
         {/* Coming Soon Features */}
