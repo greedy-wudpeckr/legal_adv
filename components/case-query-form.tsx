@@ -19,9 +19,10 @@ type CaseQueryForm = z.infer<typeof caseQuerySchema>;
 
 interface Props {
   setSpeaking: Dispatch<SetStateAction<boolean>>;
+  setCurrentSubtitle?: Dispatch<SetStateAction<string>>;
 }
 
-export default function CaseQueryForm({ setSpeaking }: Props) {
+export default function CaseQueryForm({ setSpeaking, setCurrentSubtitle }: Props) {
   const { toast } = useToast();
 
   const {
@@ -35,6 +36,11 @@ export default function CaseQueryForm({ setSpeaking }: Props) {
 
   const onSubmit = async (data: CaseQueryForm) => {
     try {
+      // Update subtitle to show the user's question
+      if (setCurrentSubtitle) {
+        setCurrentSubtitle(`Question: ${data.caseQuery}`);
+      }
+
       // Get Gemini response
       const res = await fetch('/api/gemini', {
         method: 'POST',
@@ -44,6 +50,11 @@ export default function CaseQueryForm({ setSpeaking }: Props) {
 
       const result = await res.json();
       const answer: string = result.text || "No response received.";
+
+      // Update subtitle with the AI response
+      if (setCurrentSubtitle) {
+        setCurrentSubtitle(answer);
+      }
 
       // Call ElevenLabs TTS API
       setSpeaking(true);
@@ -60,8 +71,19 @@ export default function CaseQueryForm({ setSpeaking }: Props) {
       const audata = await audioRes.json();
       const audio = new Audio(`data:audio/mpeg;base64,${audata.audio}`);
 
-      audio.onended = () => setSpeaking(false);
-      audio.onerror = () => setSpeaking(false);
+      audio.onended = () => {
+        setSpeaking(false);
+        // Reset subtitle after speech ends
+        if (setCurrentSubtitle) {
+          setCurrentSubtitle("Ask me another legal question...");
+        }
+      };
+      audio.onerror = () => {
+        setSpeaking(false);
+        if (setCurrentSubtitle) {
+          setCurrentSubtitle("Error playing audio response");
+        }
+      };
 
       audio.play();
       reset();
@@ -69,6 +91,9 @@ export default function CaseQueryForm({ setSpeaking }: Props) {
     } catch (error) {
       console.error("Submission error:", error);
       setSpeaking(false);
+      if (setCurrentSubtitle) {
+        setCurrentSubtitle("Error: Failed to get response");
+      }
       toast({
         title: "Error",
         description: "Failed to get response from Gemini or TTS.",
