@@ -4,6 +4,7 @@ import { useState } from 'react';
 
 import CaseQueryForm from '@/components/case-query-form';
 import GandhiModel from '@/components/courtroom-scene';
+import Navigation from '@/components/navigation';
 import { Toaster } from '@/components/ui/toaster';
 import { OrbitControls } from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
@@ -14,6 +15,8 @@ export default function Home() {
     <div className="relative bg-cover bg-center w-full h-screen"
       style={{ backgroundImage: "url('/courtroom-bg.png')" }}
     >
+      <Navigation />
+      
       <Canvas camera={{ position: [0, 1.5, 3] }}>
         <ambientLight intensity={2} />
         <directionalLight position={[2, 2, 5]} />
