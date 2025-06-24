@@ -84,4 +84,6 @@ Our architecture leverages open-source AI and data tools for flexibility and cos
 
 This architectural blueprint guides our development, ensuring that `Courtroom-3D` can systematically evolve into the full **ApnaWakeel.ai** vision, expanding its features (like document analysis, hearing trackers, template generation), increasing language support, and scaling effectively while always prioritizing user privacy and impact.
 
+## Architecture
+(/public/archt.png)
 
