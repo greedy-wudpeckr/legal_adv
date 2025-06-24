@@ -90,9 +90,9 @@ export const sampleCases: CaseScenario[] = [
 ];
 
 export const getCaseById = (caseId: string): CaseScenario | undefined => {
-  return sampleCases.find(case => case.caseId === caseId);
+  return sampleCases.find(caseItem => caseItem.caseId === caseId);
 };
 
 export const getCasesByCategory = (category: string): CaseScenario[] => {
-  return sampleCases.filter(case => case.category === category);
+  return sampleCases.filter(caseItem => caseItem.category === category);
 };
