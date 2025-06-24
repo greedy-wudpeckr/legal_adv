@@ -1,6 +1,6 @@
 "use client";
 
-import { Dispatch, SetStateAction } from 'react';
+import { Dispatch, SetStateAction, useRef, useState } from 'react';
 
 import { Scale } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { zodResolver } from '@hookform/resolvers/zod';
+import AudioCaption from '@/components/audio-caption';
 
 const caseQuerySchema = z.object({
   caseQuery: z.string().min(1, "Case query is required"),
@@ -25,6 +26,9 @@ interface Props {
 
 export default function CaseQueryForm({ setSpeaking, setCurrentSubtitle, setSubtitleDuration }: Props) {
   const { toast } = useToast();
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [currentResponse, setCurrentResponse] = useState<string>("");
+  const [showCaption, setShowCaption] = useState(false);
 
   const {
     register,
@@ -35,21 +39,21 @@ export default function CaseQueryForm({ setSpeaking, setCurrentSubtitle, setSubt
     resolver: zodResolver(caseQuerySchema),
   });
 
-  const calculateAudioDuration = (text: string): number => {
-    // Estimate audio duration based on text length
-    // Average speaking rate: ~150-200 words per minute
+  const calculateDuration = (text: string): number => {
+    // Calculate duration based on text length
+    // Roughly 150-200 words per minute for comfortable reading
     const words = text.trim().split(/\s+/).length;
-    const wordsPerSecond = 2.5; // Conservative estimate for clear speech
-    return Math.max(3000, words * (1000 / wordsPerSecond)); // Minimum 3 seconds
+    const wordsPerSecond = 2.5; // Comfortable reading pace
+    return Math.max(2000, words * (1000 / wordsPerSecond)); // Minimum 2 seconds
   };
 
   const onSubmit = async (data: CaseQueryForm) => {
     try {
-      // Show user's question first
+      // Update subtitle to show the user's question
       if (setCurrentSubtitle && setSubtitleDuration) {
         const questionText = `Question: ${data.caseQuery}`;
         setCurrentSubtitle(questionText);
-        setSubtitleDuration(3000); // Fixed 3 seconds for question display
+        setSubtitleDuration(calculateDuration(questionText));
       }
 
       // Get Gemini response
@@ -62,16 +66,16 @@ export default function CaseQueryForm({ setSpeaking, setCurrentSubtitle, setSubt
       const result = await res.json();
       const answer: string = result.text || "No response received.";
 
-      // Calculate expected audio duration
-      const estimatedDuration = calculateAudioDuration(answer);
+      // Set response text for captions
+      setCurrentResponse(answer);
 
-      // Set subtitle text and duration BEFORE starting audio
+      // Update subtitle with the AI response
       if (setCurrentSubtitle && setSubtitleDuration) {
         setCurrentSubtitle(answer);
-        setSubtitleDuration(estimatedDuration);
+        setSubtitleDuration(calculateDuration(answer));
       }
 
-      // Get audio from ElevenLabs
+      // Call ElevenLabs TTS API
       const audioRes = await fetch('/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -83,51 +87,39 @@ export default function CaseQueryForm({ setSpeaking, setCurrentSubtitle, setSubt
 
       const audata = await audioRes.json();
       const audio = new Audio(`data:audio/mpeg;base64,${audata.audio}`);
+      audioRef.current = audio;
 
-      // Set up audio event handlers BEFORE playing
-      audio.onloadedmetadata = () => {
-        // Update duration with actual audio duration if available
-        if (setSubtitleDuration && audio.duration && !isNaN(audio.duration)) {
-          const actualDuration = audio.duration * 1000; // Convert to milliseconds
-          setSubtitleDuration(actualDuration);
-        }
+      // Show captions when audio is ready
+      audio.onloadeddata = () => {
+        setShowCaption(true);
       };
 
       audio.onplay = () => {
         setSpeaking(true);
-        // Subtitle should already be set and animating at this point
       };
 
       audio.onended = () => {
         setSpeaking(false);
-        // Clear subtitle after a brief delay
-        setTimeout(() => {
-          if (setCurrentSubtitle && setSubtitleDuration) {
+        setShowCaption(false);
+        // Reset subtitle after speech ends
+        if (setCurrentSubtitle && setSubtitleDuration) {
+          setTimeout(() => {
             setCurrentSubtitle("Ask me another legal question...");
             setSubtitleDuration(2500);
-          }
-        }, 1000);
+          }, 1000);
+        }
       };
 
-      audio.onerror = (error) => {
-        console.error("Audio playback error:", error);
+      audio.onerror = () => {
         setSpeaking(false);
-        
-        // Show error message and display full text immediately
+        setShowCaption(false);
         if (setCurrentSubtitle && setSubtitleDuration) {
-          setCurrentSubtitle(`Audio Error: ${answer}`);
-          setSubtitleDuration(1000); // Show immediately for 1 second, then clear
-          
-          // Clear after showing error
-          setTimeout(() => {
-            setCurrentSubtitle("Audio playback failed. Please try again.");
-            setSubtitleDuration(3000);
-          }, 5000);
+          setCurrentSubtitle("Error playing audio response");
+          setSubtitleDuration(2000);
         }
-        
         toast({
           title: "Audio Error",
-          description: "Failed to play audio response, but text is displayed.",
+          description: "Failed to play audio, but response is shown in captions.",
           variant: "destructive",
         });
       };
@@ -138,28 +130,18 @@ export default function CaseQueryForm({ setSpeaking, setCurrentSubtitle, setSubt
 
       audio.onabort = () => {
         setSpeaking(false);
-        if (setCurrentSubtitle && setSubtitleDuration) {
-          setCurrentSubtitle("Audio playback was interrupted.");
-          setSubtitleDuration(2000);
-        }
+        setShowCaption(false);
       };
 
-      // Start playing audio - subtitle should already be animating
       try {
         await audio.play();
       } catch (playError) {
         console.error("Audio play failed:", playError);
         setSpeaking(false);
-        
-        // Fallback: show full text immediately if audio fails to play
-        if (setCurrentSubtitle && setSubtitleDuration) {
-          setCurrentSubtitle(answer);
-          setSubtitleDuration(1); // Show all text immediately
-        }
-        
+        setShowCaption(false);
         toast({
           title: "Playback Error",
-          description: "Could not play audio. Text response is shown instead.",
+          description: "Could not play audio. Response is shown in captions.",
           variant: "destructive",
         });
       }
@@ -169,12 +151,11 @@ export default function CaseQueryForm({ setSpeaking, setCurrentSubtitle, setSubt
     } catch (error) {
       console.error("Submission error:", error);
       setSpeaking(false);
-      
+      setShowCaption(false);
       if (setCurrentSubtitle && setSubtitleDuration) {
-        setCurrentSubtitle("Error: Failed to get response from AI");
-        setSubtitleDuration(3000);
+        setCurrentSubtitle("Error: Failed to get response");
+        setSubtitleDuration(2000);
       }
-      
       toast({
         title: "Error",
         description: "Failed to get response from Gemini or TTS.",
@@ -183,45 +164,62 @@ export default function CaseQueryForm({ setSpeaking, setCurrentSubtitle, setSubt
     }
   };
 
+  const handleCaptionComplete = () => {
+    // Caption animation completed
+    setTimeout(() => {
+      setShowCaption(false);
+    }, 1000);
+  };
+
   return (
-    <div className="mx-auto max-w-2xl">
-      <div className="bg-white/95 shadow-2xl backdrop-blur-sm p-6 border border-amber-200 rounded-lg">
-        <div className="flex items-center gap-3 mb-4">
-          <Scale className="w-6 h-6 text-amber-600" />
-          <h2 className="font-bold text-gray-800 text-xl">Legal Query</h2>
-        </div>
+    <>
+      <div className="mx-auto max-w-2xl">
+        <div className="bg-white/95 shadow-2xl backdrop-blur-sm p-6 border border-amber-200 rounded-lg">
+          <div className="flex items-center gap-3 mb-4">
+            <Scale className="w-6 h-6 text-amber-600" />
+            <h2 className="font-bold text-gray-800 text-xl">Legal Query</h2>
+          </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <Input
-            id="caseQuery"
-            type="text"
-            placeholder="Enter your legal query..."
-            className={`w-full px-4 py-3 border rounded-lg transition-all ${errors.caseQuery ? "border-red-500 bg-red-50" : "border-gray-300 bg-white"
-              } focus:ring-2 focus:ring-amber-500 focus:border-transparent`}
-            {...register("caseQuery")}
-          />
-          {errors.caseQuery && (
-            <p className="mt-1 text-red-600 text-sm">
-              {errors.caseQuery.message}
-            </p>
-          )}
-
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-            className="bg-amber-600 hover:bg-amber-700 disabled:opacity-50 px-6 py-3 rounded-lg w-full font-semibold text-white transition-colors duration-200 disabled:cursor-not-allowed"
-          >
-            {isSubmitting ? (
-              <div className="flex items-center gap-2">
-                <div className="border-2 border-white border-t-transparent rounded-full w-4 h-4 animate-spin" />
-                Processing...
-              </div>
-            ) : (
-              "Submit Query"
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <Input
+              id="caseQuery"
+              type="text"
+              placeholder="Enter your legal query..."
+              className={`w-full px-4 py-3 border rounded-lg transition-all ${errors.caseQuery ? "border-red-500 bg-red-50" : "border-gray-300 bg-white"
+                } focus:ring-2 focus:ring-amber-500 focus:border-transparent`}
+              {...register("caseQuery")}
+            />
+            {errors.caseQuery && (
+              <p className="mt-1 text-red-600 text-sm">
+                {errors.caseQuery.message}
+              </p>
             )}
-          </Button>
-        </form>
+
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="bg-amber-600 hover:bg-amber-700 disabled:opacity-50 px-6 py-3 rounded-lg w-full font-semibold text-white transition-colors duration-200 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? (
+                <div className="flex items-center gap-2">
+                  <div className="border-2 border-white border-t-transparent rounded-full w-4 h-4 animate-spin" />
+                  Submitting...
+                </div>
+              ) : (
+                "Submit Query"
+              )}
+            </Button>
+          </form>
+        </div>
       </div>
-    </div>
+
+      {/* Audio-synchronized captions */}
+      <AudioCaption
+        responseText={currentResponse}
+        audioElement={audioRef.current}
+        isVisible={showCaption}
+        onComplete={handleCaptionComplete}
+      />
+    </>
   );
 }
