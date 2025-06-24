@@ -15,12 +15,16 @@ import {
   XCircle,
   AlertCircle,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
+  FileText,
+  Users,
+  Eye,
+  Mic
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getCaseById } from '@/data/sample-cases';
 
-type BattleRound = 'opening' | 'evidence' | 'cross-examination' | 'closing';
+type BattlePhase = 'opening-statements' | 'evidence-presentation' | 'witness-examination' | 'closing-arguments';
 type PlayerRole = 'defense' | 'prosecution';
 type EffectivenessLevel = 'perfect' | 'good' | 'weak' | 'bad';
 
@@ -29,12 +33,13 @@ interface ResponseOption {
   effectiveness: EffectivenessLevel;
   scoreChange: number;
   explanation: string;
+  strategyType: string;
 }
 
 interface BattleState {
-  currentRound: BattleRound;
-  roundNumber: number;
-  totalRounds: number;
+  currentPhase: BattlePhase;
+  phaseNumber: number;
+  totalPhases: number;
   score: number;
   timeRemaining: number;
   choiceTimeRemaining: number;
@@ -51,308 +56,301 @@ interface BattleState {
   gamePhase: 'gandhi-speaking' | 'player-choosing' | 'showing-results' | 'game-over';
   flashEffect: 'none' | 'green' | 'red';
   gandhiMood: 'confident' | 'worried' | 'neutral';
+  phaseContext: {
+    evidencePresented?: string[];
+    witnessesExamined?: string[];
+    keyPoints?: string[];
+  };
 }
 
-const roundNames = {
-  opening: 'Opening Statements',
-  evidence: 'Evidence Presentation',
-  'cross-examination': 'Cross-Examination',
-  closing: 'Closing Arguments'
+const phaseNames = {
+  'opening-statements': 'Opening Statements',
+  'evidence-presentation': 'Evidence Presentation',
+  'witness-examination': 'Witness Cross-Examination',
+  'closing-arguments': 'Closing Arguments'
 };
 
-// Gandhi arguments for each round and role
+const phaseDescriptions = {
+  'opening-statements': 'Set the narrative and outline your case strategy',
+  'evidence-presentation': 'Present and challenge physical evidence',
+  'witness-examination': 'Question witnesses and test their credibility',
+  'closing-arguments': 'Make your final appeal to the jury'
+};
+
+const phaseIcons = {
+  'opening-statements': Mic,
+  'evidence-presentation': FileText,
+  'witness-examination': Users,
+  'closing-arguments': Scale
+};
+
+// Gandhi arguments for each phase
 const gandhiArguments = {
-  1: {
-    prosecution: "Your Honor, the evidence will clearly show that the defendant committed this heinous crime. We have physical evidence, witness testimony, and a clear motive. The defendant was found at the scene with the murder weapon in hand.",
-    defense: "Your Honor, the prosecution's case is built on circumstantial evidence and assumptions. We will demonstrate that reasonable doubt exists and my client is innocent of these charges."
+  'opening-statements': {
+    prosecution: "Your Honor, members of the jury, today I will prove beyond reasonable doubt that the defendant committed premeditated murder. The evidence will show motive, means, and opportunity. The defendant was found at the scene with the murder weapon, and their fingerprints tell the story of guilt.",
+    defense: "Your Honor, esteemed jurors, the prosecution's case is built on circumstantial evidence and assumptions. My client is innocent, and I will demonstrate that reasonable doubt exists at every turn. The prosecution must prove guilt beyond reasonable doubt - they cannot and will not meet this burden."
   },
-  2: {
-    prosecution: "The murder weapon bears the defendant's fingerprints, and security footage places them at the scene during the time of death. This is not coincidence, but proof of guilt.",
-    defense: "The evidence is circumstantial at best. Fingerprints on a kitchen knife in someone's own home? Security footage showing a visit? None of this proves murder beyond reasonable doubt."
+  'evidence-presentation': {
+    prosecution: "Let's examine the murder weapon - an 8-inch kitchen knife with the defendant's fingerprints clearly visible on the handle. The blood spatter analysis shows the victim was attacked while cooking, with no signs of struggle. Security footage places the defendant at the scene during the time of death.",
+    defense: "The prosecution wants you to believe that fingerprints on a kitchen knife in someone's own home proves murder. The security footage merely shows a visit - not a crime. The lack of struggle could indicate many scenarios, none of which necessarily point to my client as the perpetrator."
   },
-  3: {
-    prosecution: "The witness clearly stated they heard arguing and then silence. The defendant had motive - a $5,000 debt dispute. When confronted with evidence, they have no alibi.",
-    defense: "The witness testimony is inconsistent and based on assumptions. A debt dispute doesn't equal murder, and being present doesn't prove guilt. Where is the concrete evidence?"
+  'witness-examination': {
+    prosecution: "Mrs. Johnson, the neighbor, clearly heard arguing followed by sudden silence at 9:30 PM. The defendant had no alibi for this crucial time period. When questioned by Detective Rodriguez, the defendant appeared shocked but offered no explanation for their presence at the scene.",
+    defense: "Mrs. Johnson admits she heard sounds through apartment walls - hardly reliable evidence. Detective Rodriguez found my client in shock, which is exactly how an innocent person would react upon discovering a tragedy. The prosecution's witnesses offer speculation, not facts."
   },
-  4: {
-    prosecution: "The blood spatter analysis shows the victim was attacked while cooking. No signs of struggle suggest the victim trusted their attacker. Who else had access to the apartment?",
-    defense: "The lack of struggle could indicate many scenarios. The prosecution wants you to fill in gaps with speculation. They must prove guilt beyond reasonable doubt, not create a story."
-  },
-  5: {
-    prosecution: "Ladies and gentlemen, we have presented overwhelming evidence. The defendant had motive, means, and opportunity. The evidence speaks for itself - guilty beyond reasonable doubt.",
-    defense: "The prosecution has failed to prove guilt beyond reasonable doubt. Circumstantial evidence and speculation cannot convict an innocent person. You must find my client not guilty."
+  'closing-arguments': {
+    prosecution: "Ladies and gentlemen, we have presented overwhelming evidence: the defendant's fingerprints on the murder weapon, their presence at the scene, a clear motive involving money, and no credible alibi. The evidence speaks with one voice - guilty beyond reasonable doubt.",
+    defense: "The prosecution has failed to prove guilt beyond reasonable doubt. They've presented circumstantial evidence, speculation, and asked you to fill in gaps with assumptions. In America, we don't convict on maybes and possibilities. The evidence creates reasonable doubt, and you must find my client not guilty."
   }
 };
 
-// Enhanced response options with explanations
+// Phase-specific response options with different strategy types
 const responseOptions = {
-  1: {
+  'opening-statements': {
     prosecution: [
       { 
-        text: "Challenge the defense's claim by presenting the timeline of events and physical evidence found at the scene", 
+        text: "Present a clear timeline of events leading to the murder, emphasizing the defendant's motive and opportunity", 
         effectiveness: 'perfect' as EffectivenessLevel, 
         scoreChange: 20, 
-        explanation: "Excellent strategy! Immediately countering with concrete evidence establishes credibility and puts the defense on the defensive. This direct approach resonates well with juries."
+        explanation: "Excellent opening strategy! A clear, chronological narrative helps jurors understand the case and creates a strong foundation for evidence presentation.",
+        strategyType: "Narrative Building"
       },
       { 
-        text: "Emphasize the defendant's presence at the scene and their relationship with the victim", 
+        text: "Focus on the physical evidence and forensic findings that will be presented during trial", 
         effectiveness: 'good' as EffectivenessLevel, 
         scoreChange: 10, 
-        explanation: "Good approach. Establishing opportunity and connection is important, though it would be stronger with more specific evidence details."
+        explanation: "Good approach. Previewing strong evidence builds anticipation, though a complete narrative would be more compelling.",
+        strategyType: "Evidence Preview"
       },
       { 
-        text: "Appeal to the jury's emotions about the victim's family and community safety", 
+        text: "Make an emotional appeal about justice for the victim and community safety", 
         effectiveness: 'weak' as EffectivenessLevel, 
         scoreChange: -10, 
-        explanation: "Weak strategy for opening statements. Emotional appeals work better in closing arguments. Focus on facts and evidence first."
+        explanation: "Weak for opening statements. Emotional appeals are better saved for closing arguments after evidence has been presented.",
+        strategyType: "Emotional Appeal"
       },
       { 
-        text: "Attack the defense attorney's credibility and experience in murder cases", 
+        text: "Attack the defense's anticipated arguments before they present them", 
         effectiveness: 'bad' as EffectivenessLevel, 
         scoreChange: -20, 
-        explanation: "Poor choice! Personal attacks on opposing counsel appear unprofessional and desperate. This damages your credibility with the jury."
+        explanation: "Poor strategy! Attacking arguments that haven't been made yet appears defensive and may give the defense ideas.",
+        strategyType: "Preemptive Attack"
       }
     ],
     defense: [
       { 
-        text: "Point out the lack of direct evidence and emphasize the burden of proof lies with prosecution", 
+        text: "Emphasize the burden of proof and presumption of innocence while outlining reasonable doubt themes", 
         effectiveness: 'perfect' as EffectivenessLevel, 
         scoreChange: 20, 
-        explanation: "Perfect defense strategy! Immediately establishing reasonable doubt and reminding the jury of the prosecution's burden is textbook defense work."
+        explanation: "Perfect defense opening! Establishing legal standards and doubt themes gives jurors a framework for evaluating evidence.",
+        strategyType: "Legal Framework"
       },
       { 
-        text: "Suggest alternative theories that could explain the defendant's presence at the scene", 
+        text: "Present alternative theories for what really happened that night", 
         effectiveness: 'good' as EffectivenessLevel, 
         scoreChange: 10, 
-        explanation: "Good approach. Providing alternative explanations creates doubt, though be careful not to seem like you're grasping at straws."
+        explanation: "Good strategy. Alternative theories create doubt, though be careful not to seem like you're grasping at straws.",
+        strategyType: "Alternative Theory"
       },
       { 
-        text: "Highlight the defendant's clean criminal record and good character", 
+        text: "Highlight your client's good character and lack of criminal history", 
         effectiveness: 'weak' as EffectivenessLevel, 
         scoreChange: -10, 
-        explanation: "Weak for opening statements. Character evidence is better saved for later in the trial when you need to humanize your client."
+        explanation: "Weak timing. Character evidence is better presented during the defense case, not in opening statements.",
+        strategyType: "Character Defense"
       },
       { 
-        text: "Claim the prosecution is rushing to judgment without proper investigation", 
+        text: "Accuse the prosecution of rushing to judgment without proper investigation", 
         effectiveness: 'bad' as EffectivenessLevel, 
         scoreChange: -20, 
-        explanation: "Bad strategy! Making accusations without evidence makes you look desperate and undermines your credibility from the start."
+        explanation: "Bad approach! Making accusations without evidence undermines your credibility from the start.",
+        strategyType: "Prosecution Attack"
       }
     ]
   },
-  2: {
+  'evidence-presentation': {
     prosecution: [
       { 
-        text: "Present the forensic timeline showing the defendant's fingerprints were fresh and the security footage timestamp", 
+        text: "Present forensic timeline showing fresh fingerprints and correlate with security footage timestamp", 
         effectiveness: 'perfect' as EffectivenessLevel, 
         scoreChange: 20, 
-        explanation: "Excellent! Combining multiple pieces of evidence with scientific backing creates a compelling narrative that's hard to refute."
+        explanation: "Excellent evidence presentation! Combining multiple pieces of scientific evidence creates a compelling, hard-to-refute narrative.",
+        strategyType: "Scientific Correlation"
       },
       { 
-        text: "Introduce the text messages showing the heated argument about money earlier that day", 
+        text: "Introduce the text message evidence showing the financial dispute and motive", 
         effectiveness: 'good' as EffectivenessLevel, 
         scoreChange: 10, 
-        explanation: "Good move. Establishing motive is crucial, and contemporary communications are powerful evidence."
+        explanation: "Good strategy. Establishing motive is crucial, and contemporary communications are powerful evidence.",
+        strategyType: "Motive Evidence"
       },
       { 
-        text: "Call the medical examiner to testify about the cause and time of death", 
+        text: "Focus on the blood spatter pattern and what it reveals about the attack", 
         effectiveness: 'weak' as EffectivenessLevel, 
         scoreChange: -10, 
-        explanation: "Weak timing. Medical testimony is important but should be presented strategically, not as a reaction to defense arguments."
+        explanation: "Weak approach. Blood evidence alone without context may confuse jurors rather than convince them.",
+        strategyType: "Forensic Detail"
       },
       { 
-        text: "Show graphic crime scene photos to emphasize the brutality of the attack", 
+        text: "Show graphic crime scene photos to emphasize the brutality", 
         effectiveness: 'bad' as EffectivenessLevel, 
         scoreChange: -20, 
-        explanation: "Poor choice! Graphic photos without proper foundation can backfire and make you appear to be manipulating emotions rather than presenting facts."
+        explanation: "Poor choice! Graphic photos without proper foundation can backfire and appear manipulative.",
+        strategyType: "Shock Value"
       }
     ],
     defense: [
       { 
-        text: "Question the chain of custody for evidence and point out contamination possibilities", 
+        text: "Challenge the chain of custody and evidence handling procedures systematically", 
         effectiveness: 'perfect' as EffectivenessLevel, 
         scoreChange: 20, 
-        explanation: "Perfect defense tactic! Challenging evidence integrity is fundamental and can cast doubt on the entire prosecution case."
+        explanation: "Perfect defense tactic! Systematic challenges to evidence integrity can undermine the entire prosecution case.",
+        strategyType: "Chain of Custody"
       },
       { 
-        text: "Challenge the reliability of the security camera timestamp and video quality", 
+        text: "Question the reliability and accuracy of the security camera timestamp", 
         effectiveness: 'good' as EffectivenessLevel, 
         scoreChange: 10, 
-        explanation: "Good strategy. Technical challenges to evidence can be effective, especially if you can bring in expert testimony."
+        explanation: "Good technical challenge. Questioning digital evidence reliability can create reasonable doubt.",
+        strategyType: "Technical Challenge"
       },
       { 
-        text: "Argue that text messages show frustration, not murderous intent", 
+        text: "Argue that the text messages show frustration, not murderous intent", 
         effectiveness: 'weak' as EffectivenessLevel, 
         scoreChange: -10, 
-        explanation: "Weak approach. This argument acknowledges the conflict existed, which may hurt more than help your case."
+        explanation: "Weak approach. This acknowledges the conflict existed, which may hurt more than help.",
+        strategyType: "Intent Mitigation"
       },
       { 
-        text: "Suggest the real killer planted evidence to frame your client", 
+        text: "Suggest evidence was planted by the real killer to frame your client", 
         effectiveness: 'bad' as EffectivenessLevel, 
         scoreChange: -20, 
-        explanation: "Bad strategy! Conspiracy theories without evidence make you look desperate and can alienate the jury."
+        explanation: "Bad strategy! Conspiracy theories without evidence make you look desperate and unreliable.",
+        strategyType: "Conspiracy Theory"
       }
     ]
   },
-  3: {
+  'witness-examination': {
     prosecution: [
       { 
-        text: "Cross-examine the defendant about their exact whereabouts and actions that evening", 
+        text: "Cross-examine the defendant about specific details and inconsistencies in their story", 
         effectiveness: 'perfect' as EffectivenessLevel, 
         scoreChange: 20, 
-        explanation: "Excellent cross-examination strategy! Pinning down specific details can reveal inconsistencies and lies."
+        explanation: "Excellent cross-examination strategy! Pinning down specific details can reveal lies and inconsistencies.",
+        strategyType: "Detail Interrogation"
       },
       { 
-        text: "Press the neighbor witness about the specific sounds they heard", 
+        text: "Question Mrs. Johnson about exactly what she heard and when", 
         effectiveness: 'good' as EffectivenessLevel, 
         scoreChange: 10, 
-        explanation: "Good approach. Getting specific details from witnesses strengthens their credibility and your case."
+        explanation: "Good witness examination. Specific details from credible witnesses strengthen your case.",
+        strategyType: "Witness Specificity"
       },
       { 
-        text: "Confront the defendant with the evidence and ask them to explain the inconsistencies", 
+        text: "Confront the defendant with the evidence and demand explanations", 
         effectiveness: 'weak' as EffectivenessLevel, 
         scoreChange: -10, 
-        explanation: "Weak strategy. Giving the defendant a chance to explain can backfire if they have a good answer."
+        explanation: "Weak strategy. Giving defendants chances to explain can backfire if they have good answers.",
+        strategyType: "Evidence Confrontation"
       },
       { 
-        text: "Ask leading questions to trap the defendant in contradictions", 
+        text: "Use leading questions to trap the defendant in contradictions", 
         effectiveness: 'bad' as EffectivenessLevel, 
         scoreChange: -20, 
-        explanation: "Poor technique! Obvious leading questions will be objected to and make you look manipulative to the jury."
+        explanation: "Poor technique! Obvious leading questions will be objected to and make you look manipulative.",
+        strategyType: "Leading Questions"
       }
     ],
     defense: [
       { 
-        text: "Challenge the neighbor's ability to accurately identify sounds through apartment walls", 
+        text: "Challenge Mrs. Johnson's ability to accurately identify sounds through apartment walls", 
         effectiveness: 'perfect' as EffectivenessLevel, 
         scoreChange: 20, 
-        explanation: "Perfect defense! Attacking the reliability of witness perception is a classic and effective strategy."
+        explanation: "Perfect defense cross-examination! Attacking witness perception reliability is classic and effective.",
+        strategyType: "Perception Challenge"
       },
       { 
-        text: "Question the detective about potential evidence contamination and rushed investigation", 
+        text: "Question Detective Rodriguez about investigation procedures and potential contamination", 
         effectiveness: 'good' as EffectivenessLevel, 
         scoreChange: 10, 
-        explanation: "Good strategy. Challenging police procedures can undermine the prosecution's case foundation."
+        explanation: "Good strategy. Challenging police procedures can undermine the prosecution's foundation.",
+        strategyType: "Procedure Challenge"
       },
       { 
-        text: "Cross-examine the victim's sister about her emotional bias and hearsay testimony", 
+        text: "Cross-examine the victim's sister about her emotional bias", 
         effectiveness: 'weak' as EffectivenessLevel, 
         scoreChange: -10, 
-        explanation: "Weak approach. Attacking grieving family members can make you look heartless to the jury."
+        explanation: "Weak approach. Attacking grieving family members can make you appear heartless to jurors.",
+        strategyType: "Bias Attack"
       },
       { 
         text: "Aggressively attack the credibility of all prosecution witnesses", 
         effectiveness: 'bad' as EffectivenessLevel, 
         scoreChange: -20, 
-        explanation: "Bad strategy! Overly aggressive tactics can backfire and make the jury sympathize with the witnesses."
+        explanation: "Bad strategy! Overly aggressive tactics backfire and make jurors sympathize with witnesses.",
+        strategyType: "Aggressive Attack"
       }
     ]
   },
-  4: {
+  'closing-arguments': {
     prosecution: [
       { 
-        text: "Use the blood spatter expert to demonstrate how the attack occurred and rule out self-defense", 
+        text: "Systematically review all evidence and show how each piece points to guilt", 
         effectiveness: 'perfect' as EffectivenessLevel, 
         scoreChange: 20, 
-        explanation: "Excellent use of expert testimony! Scientific evidence presented clearly can be very persuasive to juries."
+        explanation: "Perfect closing strategy! Methodical evidence review that ties everything together is exactly what closings should do.",
+        strategyType: "Evidence Synthesis"
       },
       { 
-        text: "Establish that only the defendant had both motive and access to the victim", 
+        text: "Appeal to the jury's duty to deliver justice while connecting to the evidence", 
         effectiveness: 'good' as EffectivenessLevel, 
         scoreChange: 10, 
-        explanation: "Good logical argument. Combining motive and opportunity creates a strong circumstantial case."
-      },
-      { 
-        text: "Present character evidence showing the defendant's history of financial disputes", 
-        effectiveness: 'weak' as EffectivenessLevel, 
-        scoreChange: -10, 
-        explanation: "Weak strategy. Character evidence can be risky and may open doors for the defense to present positive character evidence."
-      },
-      { 
-        text: "Argue that the defendant's calm demeanor shows premeditation", 
-        effectiveness: 'bad' as EffectivenessLevel, 
-        scoreChange: -20, 
-        explanation: "Poor argument! People react differently to stress, and this argument is too speculative for most juries."
-      }
-    ],
-    defense: [
-      { 
-        text: "Present alternative scenarios for the blood spatter pattern and lack of struggle", 
-        effectiveness: 'perfect' as EffectivenessLevel, 
-        scoreChange: 20, 
-        explanation: "Perfect counter-strategy! Providing scientific alternative explanations directly challenges the prosecution's expert testimony."
-      },
-      { 
-        text: "Introduce evidence of other people who had access to the apartment", 
-        effectiveness: 'good' as EffectivenessLevel, 
-        scoreChange: 10, 
-        explanation: "Good approach. Showing other suspects creates reasonable doubt about your client's guilt."
-      },
-      { 
-        text: "Challenge the prosecution's timeline with alibi witnesses", 
-        effectiveness: 'weak' as EffectivenessLevel, 
-        scoreChange: -10, 
-        explanation: "Weak timing. Alibi evidence should have been presented earlier in the trial for maximum impact."
-      },
-      { 
-        text: "Claim the victim was involved in dangerous activities that led to their death", 
-        effectiveness: 'bad' as EffectivenessLevel, 
-        scoreChange: -20, 
-        explanation: "Bad strategy! Attacking the victim's character without solid evidence can backfire and anger the jury."
-      }
-    ]
-  },
-  5: {
-    prosecution: [
-      { 
-        text: "Systematically review all evidence and show how it points to one conclusion: guilt", 
-        effectiveness: 'perfect' as EffectivenessLevel, 
-        scoreChange: 20, 
-        explanation: "Perfect closing strategy! A methodical review that ties everything together is exactly what closing arguments should do."
-      },
-      { 
-        text: "Appeal to the jury's duty to deliver justice for the victim and community", 
-        effectiveness: 'good' as EffectivenessLevel, 
-        scoreChange: 10, 
-        explanation: "Good emotional appeal for closing. This is the appropriate time to combine facts with the moral imperative for justice."
+        explanation: "Good combination of facts and moral imperative. This is appropriate timing for emotional appeals.",
+        strategyType: "Justice Appeal"
       },
       { 
         text: "Address each defense argument with specific counter-evidence", 
         effectiveness: 'weak' as EffectivenessLevel, 
         scoreChange: -10, 
-        explanation: "Weak approach. Spending too much time on defense arguments can make their points seem stronger."
+        explanation: "Weak approach. Spending too much time on defense arguments can make their points seem stronger.",
+        strategyType: "Defense Rebuttal"
       },
       { 
-        text: "Make an emotional plea about the victim's life and family's suffering", 
+        text: "Make a purely emotional plea about the victim's life and family", 
         effectiveness: 'bad' as EffectivenessLevel, 
         scoreChange: -20, 
-        explanation: "Poor strategy! Pure emotional appeals without connecting to evidence can seem manipulative and desperate."
+        explanation: "Poor strategy! Pure emotion without evidence connection seems manipulative and desperate.",
+        strategyType: "Pure Emotion"
       }
     ],
     defense: [
       { 
-        text: "Systematically highlight every reasonable doubt raised during the trial", 
+        text: "Systematically highlight every reasonable doubt raised during trial", 
         effectiveness: 'perfect' as EffectivenessLevel, 
         scoreChange: 20, 
-        explanation: "Perfect defense closing! Methodically reviewing all doubts reinforces your core message and legal standard."
+        explanation: "Perfect defense closing! Methodically reviewing all doubts reinforces your core message and legal standard.",
+        strategyType: "Doubt Compilation"
       },
       { 
         text: "Remind the jury of the high burden of proof and presumption of innocence", 
         effectiveness: 'good' as EffectivenessLevel, 
         scoreChange: 10, 
-        explanation: "Good strategy. Reinforcing legal standards is important, especially in closing arguments."
+        explanation: "Good strategy. Reinforcing legal standards is important, especially in closing arguments.",
+        strategyType: "Legal Standard"
       },
       { 
-        text: "Point out the lack of direct evidence or witnesses to the actual crime", 
+        text: "Point out the lack of direct evidence or eyewitnesses to the crime", 
         effectiveness: 'weak' as EffectivenessLevel, 
         scoreChange: -10, 
-        explanation: "Weak for closing. This point should have been emphasized throughout the trial, not saved for the end."
+        explanation: "Weak for closing. This point should have been emphasized throughout trial, not saved for the end.",
+        strategyType: "Evidence Gap"
       },
       { 
-        text: "Attack the prosecution for building a case on speculation and emotion", 
+        text: "Attack the prosecution for building a case on speculation", 
         effectiveness: 'bad' as EffectivenessLevel, 
         scoreChange: -20, 
-        explanation: "Bad approach! Attacking the prosecution directly can seem unprofessional and may backfire with the jury."
+        explanation: "Bad approach! Direct attacks on prosecution can seem unprofessional and may backfire.",
+        strategyType: "Prosecution Attack"
       }
     ]
   }
@@ -361,28 +359,28 @@ const responseOptions = {
 // Gandhi responses based on effectiveness
 const gandhiResponses = {
   perfect: [
-    "That's... a very strong argument. Let me reconsider my approach...",
-    "You've raised an excellent point that I must address carefully...",
-    "I see you've done your homework. This requires a thoughtful response...",
-    "A sophisticated legal strategy. I respect that, but consider this..."
+    "That's... a very sophisticated legal argument. I must reconsider my approach...",
+    "You've raised an excellent point that requires careful consideration...",
+    "I see you've mastered this aspect of trial advocacy. Impressive...",
+    "A textbook example of effective legal strategy. Well played..."
   ],
   good: [
-    "A reasonable argument, though I believe the evidence shows...",
-    "You make a fair point, however the facts still indicate...",
-    "That's a valid concern, but let me clarify why...",
-    "I understand your position, though I must respectfully disagree..."
+    "A reasonable argument, though I believe the evidence still shows...",
+    "You make a fair point, however the facts indicate...",
+    "That's a valid legal strategy, but consider this perspective...",
+    "I understand your position, though I respectfully disagree..."
   ],
   weak: [
-    "I'm afraid that argument lacks the foundation needed...",
-    "While I see your point, it doesn't address the core evidence...",
-    "That approach seems to miss the crucial facts of this case...",
-    "I expected a stronger response to such clear evidence..."
+    "I'm afraid that argument lacks the foundation needed in this phase...",
+    "While I see your point, it doesn't address the core issues...",
+    "That approach seems to miss the strategic opportunity here...",
+    "I expected a stronger response given the evidence presented..."
   ],
   bad: [
-    "That's exactly the kind of desperate tactic I anticipated...",
-    "Such arguments only serve to undermine your credibility...",
+    "That's exactly the kind of mistake I was hoping you'd make...",
+    "Such tactics only serve to undermine your case...",
     "The jury will see through that obvious misdirection...",
-    "I'm disappointed by such unprofessional conduct..."
+    "I'm disappointed by such unprofessional conduct in my courtroom..."
   ]
 };
 
@@ -395,20 +393,25 @@ export default function BattlePage() {
   const caseData = getCaseById(caseId);
   
   const [battleState, setBattleState] = useState<BattleState>({
-    currentRound: 'opening',
-    roundNumber: 1,
-    totalRounds: 5,
+    currentPhase: 'opening-statements',
+    phaseNumber: 1,
+    totalPhases: 4,
     score: 0,
     timeRemaining: 2700, // 45 minutes
-    choiceTimeRemaining: 30,
-    gandhiArgument: gandhiArguments[1][playerRole === 'defense' ? 'prosecution' : 'defense'],
-    playerOptions: responseOptions[1][playerRole],
+    choiceTimeRemaining: 45, // Longer time for complex decisions
+    gandhiArgument: gandhiArguments['opening-statements'][playerRole === 'defense' ? 'prosecution' : 'defense'],
+    playerOptions: responseOptions['opening-statements'][playerRole],
     showGandhiSpeech: true,
     showResults: false,
     lastChoice: null,
     gamePhase: 'gandhi-speaking',
     flashEffect: 'none',
-    gandhiMood: 'confident'
+    gandhiMood: 'confident',
+    phaseContext: {
+      evidencePresented: [],
+      witnessesExamined: [],
+      keyPoints: []
+    }
   });
 
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
@@ -427,7 +430,7 @@ export default function BattlePage() {
     return () => clearInterval(timer);
   }, [battleState.gamePhase]);
 
-  // Choice timer
+  // Choice timer with phase-specific durations
   useEffect(() => {
     if (battleState.gamePhase !== 'player-choosing') return;
     
@@ -475,7 +478,6 @@ export default function BattlePage() {
   };
 
   const getScorePosition = (score: number) => {
-    // Convert score (-100 to 100) to percentage (0 to 100)
     return Math.max(0, Math.min(100, 50 + (score / 2)));
   };
 
@@ -513,6 +515,16 @@ export default function BattlePage() {
     }
   };
 
+  const getPhaseTimeLimit = (phase: BattlePhase) => {
+    switch (phase) {
+      case 'opening-statements': return 45;
+      case 'evidence-presentation': return 60;
+      case 'witness-examination': return 50;
+      case 'closing-arguments': return 45;
+      default: return 45;
+    }
+  };
+
   const handleOptionSelect = (optionIndex: number, autoSelected = false) => {
     if (battleState.gamePhase !== 'player-choosing') return;
     
@@ -529,6 +541,14 @@ export default function BattlePage() {
       Math.floor(Math.random() * gandhiResponses[selectedResponse.effectiveness].length)
     ];
 
+    // Update phase context based on choice
+    const updatedContext = { ...battleState.phaseContext };
+    if (battleState.currentPhase === 'evidence-presentation') {
+      updatedContext.evidencePresented = [...(updatedContext.evidencePresented || []), selectedResponse.strategyType];
+    } else if (battleState.currentPhase === 'witness-examination') {
+      updatedContext.witnessesExamined = [...(updatedContext.witnessesExamined || []), selectedResponse.strategyType];
+    }
+
     setBattleState(prev => ({
       ...prev,
       score: prev.score + selectedResponse.scoreChange,
@@ -540,34 +560,39 @@ export default function BattlePage() {
       },
       gamePhase: 'showing-results',
       flashEffect,
-      gandhiMood
+      gandhiMood,
+      phaseContext: updatedContext
     }));
 
     // Auto-advance after showing results
     setTimeout(() => {
-      advanceToNextRound();
-    }, 6000);
+      advanceToNextPhase();
+    }, 7000);
   };
 
-  const advanceToNextRound = () => {
+  const advanceToNextPhase = () => {
     setBattleState(prev => {
-      const nextRoundNumber = prev.roundNumber + 1;
+      const nextPhaseNumber = prev.phaseNumber + 1;
       
-      if (nextRoundNumber > prev.totalRounds) {
+      if (nextPhaseNumber > prev.totalPhases) {
         return {
           ...prev,
           gamePhase: 'game-over'
         };
       }
 
+      const phases: BattlePhase[] = ['opening-statements', 'evidence-presentation', 'witness-examination', 'closing-arguments'];
+      const nextPhase = phases[nextPhaseNumber - 1];
       const oppositionRole = playerRole === 'defense' ? 'prosecution' : 'defense';
+      const timeLimit = getPhaseTimeLimit(nextPhase);
       
       return {
         ...prev,
-        roundNumber: nextRoundNumber,
-        gandhiArgument: gandhiArguments[nextRoundNumber][oppositionRole],
-        playerOptions: responseOptions[nextRoundNumber][playerRole],
-        choiceTimeRemaining: 30,
+        currentPhase: nextPhase,
+        phaseNumber: nextPhaseNumber,
+        gandhiArgument: gandhiArguments[nextPhase][oppositionRole],
+        playerOptions: responseOptions[nextPhase][playerRole],
+        choiceTimeRemaining: timeLimit,
         gamePhase: 'gandhi-speaking',
         lastChoice: null,
         gandhiMood: 'confident'
@@ -582,14 +607,14 @@ export default function BattlePage() {
         ...prev,
         gamePhase: 'player-choosing'
       }));
-    }, 3000);
+    }, 4000);
   };
 
   const handleGandhiSpeechEnd = () => {
     setBattleState(prev => ({
       ...prev,
       gamePhase: 'player-choosing',
-      choiceTimeRemaining: 30
+      choiceTimeRemaining: getPhaseTimeLimit(prev.currentPhase)
     }));
   };
 
@@ -607,18 +632,33 @@ export default function BattlePage() {
   }
 
   if (battleState.gamePhase === 'game-over') {
-    const finalVerdict = battleState.score > 0 ? 'Defense Wins!' : battleState.score < 0 ? 'Prosecution Wins!' : 'Hung Jury!';
-    const verdictColor = battleState.score > 0 ? 'text-green-600' : battleState.score < 0 ? 'text-red-600' : 'text-gray-600';
+    const finalVerdict = battleState.score > 20 ? 'Defense Wins!' : 
+                        battleState.score < -20 ? 'Prosecution Wins!' : 
+                        'Hung Jury!';
+    const verdictColor = battleState.score > 20 ? 'text-green-600' : 
+                        battleState.score < -20 ? 'text-red-600' : 
+                        'text-gray-600';
     
     return (
       <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100 flex items-center justify-center">
-        <div className="bg-white rounded-xl shadow-lg p-8 max-w-md text-center border border-amber-200">
+        <div className="bg-white rounded-xl shadow-lg p-8 max-w-lg text-center border border-amber-200">
           <Gavel className="w-16 h-16 text-amber-600 mx-auto mb-4" />
           <h1 className={`text-3xl font-bold mb-4 ${verdictColor}`}>{finalVerdict}</h1>
           <p className="text-gray-600 mb-2">Final Score: {battleState.score > 0 ? '+' : ''}{battleState.score}</p>
           <p className="text-sm text-gray-500 mb-6">
-            You completed {battleState.totalRounds} rounds of legal argumentation
+            You completed all {battleState.totalPhases} phases of the trial
           </p>
+          
+          {/* Phase Summary */}
+          <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
+            <h3 className="font-semibold text-gray-800 mb-2">Trial Summary</h3>
+            <div className="space-y-1 text-sm text-gray-600">
+              <div>Evidence Strategies: {battleState.phaseContext.evidencePresented?.length || 0}</div>
+              <div>Witnesses Examined: {battleState.phaseContext.witnessesExamined?.length || 0}</div>
+              <div>Playing as: {playerRole.charAt(0).toUpperCase() + playerRole.slice(1)}</div>
+            </div>
+          </div>
+          
           <div className="space-y-3">
             <Link href={`/courtroom-battle/case-briefing/${caseId}`}>
               <Button className="w-full bg-amber-600 hover:bg-amber-700">Try Again</Button>
@@ -631,6 +671,8 @@ export default function BattlePage() {
       </div>
     );
   }
+
+  const PhaseIcon = phaseIcons[battleState.currentPhase];
 
   return (
     <div className={`min-h-screen bg-gradient-to-br from-amber-50 to-orange-100 transition-all duration-1000 ${
@@ -659,19 +701,23 @@ export default function BattlePage() {
         </div>
       </div>
 
-      {/* Case Status Bar */}
+      {/* Phase Status Bar */}
       <div className="bg-white border-b border-amber-200 py-4">
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
-              <span className="text-sm font-medium text-gray-600">Round:</span>
+              <PhaseIcon className="w-6 h-6 text-amber-600" />
+              <div>
+                <span className="text-lg font-semibold text-gray-800">{phaseNames[battleState.currentPhase]}</span>
+                <p className="text-sm text-gray-600">{phaseDescriptions[battleState.currentPhase]}</p>
+              </div>
               <span className="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm font-medium">
-                {battleState.roundNumber} of {battleState.totalRounds}
+                Phase {battleState.phaseNumber} of {battleState.totalPhases}
               </span>
               {battleState.gamePhase === 'player-choosing' && (
                 <div className="flex items-center gap-2">
-                  <Clock className={`w-4 h-4 ${battleState.choiceTimeRemaining <= 10 ? 'text-red-500 animate-pulse' : 'text-orange-500'}`} />
-                  <span className={`font-mono ${battleState.choiceTimeRemaining <= 10 ? 'text-red-600 font-bold' : 'text-orange-600'}`}>
+                  <Clock className={`w-4 h-4 ${battleState.choiceTimeRemaining <= 15 ? 'text-red-500 animate-pulse' : 'text-orange-500'}`} />
+                  <span className={`font-mono ${battleState.choiceTimeRemaining <= 15 ? 'text-red-600 font-bold' : 'text-orange-600'}`}>
                     {battleState.choiceTimeRemaining}s
                   </span>
                 </div>
@@ -700,7 +746,7 @@ export default function BattlePage() {
             </div>
             <div className="text-center mt-2">
               <span className="text-sm font-medium text-gray-700">
-                Jury Meter: {battleState.score > 0 ? '+' : ''}{battleState.score}
+                Jury Favor: {battleState.score > 0 ? '+' : ''}{battleState.score}
               </span>
             </div>
           </div>
@@ -709,23 +755,24 @@ export default function BattlePage() {
 
       {/* Main Battle Interface */}
       <div className="max-w-7xl mx-auto px-6 py-6">
-        <div className="grid lg:grid-cols-3 gap-6 h-[calc(100vh-280px)]">
+        <div className="grid lg:grid-cols-3 gap-6 h-[calc(100vh-320px)]">
           
           {/* Left Panel - Player Arguments/Options */}
           <div className="bg-white rounded-xl shadow-lg border border-amber-200 p-6">
             <div className="flex items-center gap-3 mb-4">
               <User className="w-6 h-6 text-blue-600" />
-              <h3 className="text-xl font-semibold text-gray-800">Your Response</h3>
+              <h3 className="text-xl font-semibold text-gray-800">Your Strategy</h3>
             </div>
             
             {battleState.gamePhase === 'gandhi-speaking' ? (
               <div className="text-center py-8">
-                <p className="text-gray-600 mb-4">Gandhi is presenting their argument...</p>
+                <PhaseIcon className="w-12 h-12 text-amber-600 mx-auto mb-4" />
+                <p className="text-gray-600 mb-4">Gandhi is presenting their {battleState.currentPhase.replace('-', ' ')}...</p>
                 <Button 
                   onClick={handleGandhiSpeechEnd}
                   className="bg-amber-600 hover:bg-amber-700"
                 >
-                  Continue
+                  Prepare Response
                 </Button>
               </div>
             ) : battleState.gamePhase === 'showing-results' ? (
@@ -733,12 +780,17 @@ export default function BattlePage() {
                 <div className={`p-4 rounded-lg border-2 ${getEffectivenessColor(battleState.lastChoice!.effectiveness)}`}>
                   <div className="flex items-center gap-2 mb-2">
                     {getEffectivenessIcon(battleState.lastChoice!.effectiveness)}
-                    <span className="font-medium capitalize">{battleState.lastChoice!.effectiveness} Choice</span>
+                    <span className="font-medium capitalize">{battleState.lastChoice!.effectiveness} Strategy</span>
                     <span className="text-sm">({battleState.lastChoice!.option.scoreChange > 0 ? '+' : ''}{battleState.lastChoice!.option.scoreChange} points)</span>
+                  </div>
+                  <div className="mb-2">
+                    <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+                      {battleState.lastChoice!.option.strategyType}
+                    </span>
                   </div>
                   <p className="text-sm mb-3">{battleState.lastChoice!.option.text}</p>
                   <div className="bg-white/50 rounded p-3 border-l-4 border-current">
-                    <h5 className="font-medium text-xs uppercase tracking-wide mb-1">Why this choice:</h5>
+                    <h5 className="font-medium text-xs uppercase tracking-wide mb-1">Strategic Analysis:</h5>
                     <p className="text-xs">{battleState.lastChoice!.option.explanation}</p>
                   </div>
                 </div>
@@ -749,15 +801,15 @@ export default function BattlePage() {
                 </div>
                 
                 <div className="text-center">
-                  <p className="text-sm text-gray-600">Advancing to next round...</p>
+                  <p className="text-sm text-gray-600">Advancing to next phase...</p>
                   <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                    <div className="bg-amber-600 h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
+                    <div className="bg-amber-600 h-2 rounded-full animate-pulse" style={{ width: '70%' }}></div>
                   </div>
                 </div>
               </div>
             ) : (
               <div className="space-y-3">
-                <p className="text-sm text-gray-600 mb-4">Choose your response strategy:</p>
+                <p className="text-sm text-gray-600 mb-4">Choose your {battleState.currentPhase.replace('-', ' ')} strategy:</p>
                 {battleState.playerOptions.map((option, index) => (
                   <button
                     key={index}
@@ -773,7 +825,12 @@ export default function BattlePage() {
                       <span className="flex-shrink-0 w-6 h-6 bg-amber-100 text-amber-800 rounded-full flex items-center justify-center text-sm font-medium">
                         {index + 1}
                       </span>
-                      <span className="text-sm">{option.text}</span>
+                      <div className="flex-1">
+                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+                          {option.strategyType}
+                        </div>
+                        <span className="text-sm">{option.text}</span>
+                      </div>
                     </div>
                   </button>
                 ))}
@@ -786,23 +843,27 @@ export default function BattlePage() {
             <div className="text-center">
               <Gavel className="w-16 h-16 text-amber-600 mx-auto mb-4" />
               <h3 className="text-2xl font-bold text-gray-800 mb-2">Judge's Bench</h3>
-              <p className="text-gray-600 mb-6">Presiding over the case</p>
+              <p className="text-gray-600 mb-6">Presiding over the trial</p>
               
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                <h4 className="font-semibold text-gray-800 mb-2">Case Progress</h4>
-                <div className="space-y-2 text-sm">
-                  {Array.from({ length: battleState.totalRounds }, (_, i) => i + 1).map((round) => (
-                    <div key={round} className={`flex items-center gap-2 ${
-                      battleState.roundNumber === round ? 'text-amber-600 font-medium' : 
-                      battleState.roundNumber > round ? 'text-green-600' : 'text-gray-400'
-                    }`}>
-                      <div className={`w-2 h-2 rounded-full ${
-                        battleState.roundNumber === round ? 'bg-amber-600' :
-                        battleState.roundNumber > round ? 'bg-green-600' : 'bg-gray-300'
-                      }`}></div>
-                      <span>Round {round}</span>
-                    </div>
-                  ))}
+                <h4 className="font-semibold text-gray-800 mb-3">Trial Progress</h4>
+                <div className="space-y-3 text-sm">
+                  {Object.entries(phaseNames).map(([phase, name], index) => {
+                    const PhaseIcon = phaseIcons[phase as BattlePhase];
+                    return (
+                      <div key={phase} className={`flex items-center gap-3 ${
+                        battleState.currentPhase === phase ? 'text-amber-600 font-medium' : 
+                        battleState.phaseNumber > index + 1 ? 'text-green-600' : 'text-gray-400'
+                      }`}>
+                        <PhaseIcon className="w-4 h-4" />
+                        <div className={`w-2 h-2 rounded-full ${
+                          battleState.currentPhase === phase ? 'bg-amber-600' :
+                          battleState.phaseNumber > index + 1 ? 'bg-green-600' : 'bg-gray-300'
+                        }`}></div>
+                        <span>{name}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -845,7 +906,7 @@ export default function BattlePage() {
                   <div className={`w-2 h-2 rounded-full ${
                     battleState.gamePhase === 'gandhi-speaking' ? 'bg-green-500 animate-pulse' : 'bg-gray-400'
                   }`}></div>
-                  {battleState.gamePhase === 'gandhi-speaking' ? 'Speaking' : 'Waiting'}
+                  {battleState.gamePhase === 'gandhi-speaking' ? 'Presenting' : 'Waiting'}
                 </div>
               </div>
             </div>
