@@ -10,26 +10,41 @@ import {
   Gavel,
   User,
   MessageSquare,
-  ChevronRight
+  ChevronRight,
+  CheckCircle,
+  XCircle,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getCaseById } from '@/data/sample-cases';
 
 type BattleRound = 'opening' | 'evidence' | 'cross-examination' | 'closing';
 type PlayerRole = 'defense' | 'prosecution';
+type EffectivenessLevel = 'optimal' | 'decent' | 'weak';
+
+interface ResponseOption {
+  text: string;
+  effectiveness: EffectivenessLevel;
+  scoreChange: number;
+}
 
 interface BattleState {
   currentRound: BattleRound;
-  score: number; // -100 to 100, negative favors prosecution, positive favors defense
+  roundNumber: number;
+  totalRounds: number;
+  score: number;
   timeRemaining: number;
+  choiceTimeRemaining: number;
   gandhiArgument: string;
-  playerOptions: string[];
-  roundHistory: Array<{
-    round: BattleRound;
-    gandhiArgument: string;
-    playerResponse: string;
-    scoreChange: number;
-  }>;
+  playerOptions: ResponseOption[];
+  showGandhiSpeech: boolean;
+  showResults: boolean;
+  lastChoice: {
+    option: ResponseOption;
+    effectiveness: EffectivenessLevel;
+    gandhiResponse: string;
+  } | null;
+  gamePhase: 'gandhi-speaking' | 'player-choosing' | 'showing-results' | 'game-over';
 }
 
 const roundNames = {
@@ -39,82 +54,124 @@ const roundNames = {
   closing: 'Closing Arguments'
 };
 
+// Gandhi arguments for each round and role
 const gandhiArguments = {
-  opening: {
-    prosecution: "Your Honor, the evidence will clearly show that the defendant committed this heinous crime. We have physical evidence, witness testimony, and a clear motive. Justice demands accountability.",
+  1: {
+    prosecution: "Your Honor, the evidence will clearly show that the defendant committed this heinous crime. We have physical evidence, witness testimony, and a clear motive. The defendant was found at the scene with the murder weapon in hand.",
     defense: "Your Honor, the prosecution's case is built on circumstantial evidence and assumptions. We will demonstrate that reasonable doubt exists and my client is innocent of these charges."
   },
-  evidence: {
+  2: {
     prosecution: "The murder weapon bears the defendant's fingerprints, and security footage places them at the scene during the time of death. This is not coincidence, but proof of guilt.",
     defense: "The evidence is circumstantial at best. Fingerprints on a kitchen knife in someone's own home? Security footage showing a visit? None of this proves murder beyond reasonable doubt."
   },
-  'cross-examination': {
+  3: {
     prosecution: "The witness clearly stated they heard arguing and then silence. The defendant had motive - a $5,000 debt dispute. When confronted with evidence, they have no alibi.",
     defense: "The witness testimony is inconsistent and based on assumptions. A debt dispute doesn't equal murder, and being present doesn't prove guilt. Where is the concrete evidence?"
   },
-  closing: {
+  4: {
+    prosecution: "The blood spatter analysis shows the victim was attacked while cooking. No signs of struggle suggest the victim trusted their attacker. Who else had access to the apartment?",
+    defense: "The lack of struggle could indicate many scenarios. The prosecution wants you to fill in gaps with speculation. They must prove guilt beyond reasonable doubt, not create a story."
+  },
+  5: {
     prosecution: "Ladies and gentlemen, we have presented overwhelming evidence. The defendant had motive, means, and opportunity. The evidence speaks for itself - guilty beyond reasonable doubt.",
     defense: "The prosecution has failed to prove guilt beyond reasonable doubt. Circumstantial evidence and speculation cannot convict an innocent person. You must find my client not guilty."
   }
 };
 
+// Response options for each round
 const responseOptions = {
-  opening: {
+  1: {
     prosecution: [
-      "Challenge the defense's claim of innocence with concrete evidence",
-      "Emphasize the strength of physical evidence and witness testimony",
-      "Appeal to the jury's sense of justice and community safety",
-      "Outline the clear timeline and motive for the crime"
+      { text: "Challenge the defense's claim by presenting the timeline of events and physical evidence found at the scene", effectiveness: 'optimal' as EffectivenessLevel, scoreChange: 15 },
+      { text: "Emphasize the defendant's presence at the scene and their relationship with the victim", effectiveness: 'decent' as EffectivenessLevel, scoreChange: 8 },
+      { text: "Appeal to the jury's emotions about the victim's family and community safety", effectiveness: 'decent' as EffectivenessLevel, scoreChange: 6 },
+      { text: "Attack the defense attorney's credibility and experience in murder cases", effectiveness: 'weak' as EffectivenessLevel, scoreChange: -5 }
     ],
     defense: [
-      "Point out the lack of direct evidence linking client to the crime",
-      "Emphasize the burden of proof lies with the prosecution",
-      "Suggest alternative theories that create reasonable doubt",
-      "Highlight inconsistencies in the prosecution's timeline"
+      { text: "Point out the lack of direct evidence and emphasize the burden of proof lies with prosecution", effectiveness: 'optimal' as EffectivenessLevel, scoreChange: 15 },
+      { text: "Suggest alternative theories that could explain the defendant's presence at the scene", effectiveness: 'decent' as EffectivenessLevel, scoreChange: 8 },
+      { text: "Highlight the defendant's clean criminal record and good character", effectiveness: 'decent' as EffectivenessLevel, scoreChange: 6 },
+      { text: "Claim the prosecution is rushing to judgment without proper investigation", effectiveness: 'weak' as EffectivenessLevel, scoreChange: -3 }
     ]
   },
-  evidence: {
+  2: {
     prosecution: [
-      "Present the forensic analysis of the murder weapon",
-      "Show the security footage timeline to establish presence",
-      "Introduce the text messages showing motive",
-      "Call the medical examiner to testify about cause of death"
+      { text: "Present the forensic timeline showing the defendant's fingerprints were fresh and the security footage timestamp", effectiveness: 'optimal' as EffectivenessLevel, scoreChange: 12 },
+      { text: "Introduce the text messages showing the heated argument about money earlier that day", effectiveness: 'decent' as EffectivenessLevel, scoreChange: 7 },
+      { text: "Call the medical examiner to testify about the cause and time of death", effectiveness: 'decent' as EffectivenessLevel, scoreChange: 5 },
+      { text: "Show graphic crime scene photos to emphasize the brutality of the attack", effectiveness: 'weak' as EffectivenessLevel, scoreChange: -4 }
     ],
     defense: [
-      "Question the chain of custody for the murder weapon",
-      "Challenge the reliability of the security camera timestamp",
-      "Argue that text messages show frustration, not murderous intent",
-      "Request independent forensic analysis of the evidence"
+      { text: "Question the chain of custody for evidence and point out contamination possibilities", effectiveness: 'optimal' as EffectivenessLevel, scoreChange: 12 },
+      { text: "Challenge the reliability of the security camera timestamp and video quality", effectiveness: 'decent' as EffectivenessLevel, scoreChange: 7 },
+      { text: "Argue that text messages show frustration, not murderous intent", effectiveness: 'decent' as EffectivenessLevel, scoreChange: 5 },
+      { text: "Suggest the real killer planted evidence to frame your client", effectiveness: 'weak' as EffectivenessLevel, scoreChange: -6 }
     ]
   },
-  'cross-examination': {
+  3: {
     prosecution: [
-      "Press the neighbor about what exactly they heard",
-      "Question the defendant about their whereabouts that evening",
-      "Confront the defendant with the evidence against them",
-      "Ask about the nature of their relationship with the victim"
+      { text: "Cross-examine the defendant about their exact whereabouts and actions that evening", effectiveness: 'optimal' as EffectivenessLevel, scoreChange: 10 },
+      { text: "Press the neighbor witness about the specific sounds they heard", effectiveness: 'decent' as EffectivenessLevel, scoreChange: 6 },
+      { text: "Confront the defendant with the evidence and ask them to explain the inconsistencies", effectiveness: 'decent' as EffectivenessLevel, scoreChange: 4 },
+      { text: "Ask leading questions to trap the defendant in contradictions", effectiveness: 'weak' as EffectivenessLevel, scoreChange: -7 }
     ],
     defense: [
-      "Challenge the neighbor's ability to accurately identify sounds",
-      "Question the detective about potential evidence contamination",
-      "Cross-examine the victim's sister about her bias",
-      "Challenge the medical examiner's timeline conclusions"
+      { text: "Challenge the neighbor's ability to accurately identify sounds through apartment walls", effectiveness: 'optimal' as EffectivenessLevel, scoreChange: 10 },
+      { text: "Question the detective about potential evidence contamination and rushed investigation", effectiveness: 'decent' as EffectivenessLevel, scoreChange: 6 },
+      { text: "Cross-examine the victim's sister about her emotional bias and hearsay testimony", effectiveness: 'decent' as EffectivenessLevel, scoreChange: 4 },
+      { text: "Aggressively attack the credibility of all prosecution witnesses", effectiveness: 'weak' as EffectivenessLevel, scoreChange: -8 }
     ]
   },
-  closing: {
+  4: {
     prosecution: [
-      "Summarize all evidence pointing to defendant's guilt",
-      "Appeal to jury's duty to deliver justice for the victim",
-      "Address each defense argument with counter-evidence",
-      "Emphasize that all evidence points to one conclusion"
+      { text: "Use the blood spatter expert to demonstrate how the attack occurred and rule out self-defense", effectiveness: 'optimal' as EffectivenessLevel, scoreChange: 8 },
+      { text: "Establish that only the defendant had both motive and access to the victim", effectiveness: 'decent' as EffectivenessLevel, scoreChange: 5 },
+      { text: "Present character evidence showing the defendant's history of financial disputes", effectiveness: 'decent' as EffectivenessLevel, scoreChange: 3 },
+      { text: "Argue that the defendant's calm demeanor shows premeditation", effectiveness: 'weak' as EffectivenessLevel, scoreChange: -5 }
     ],
     defense: [
-      "Highlight all the reasonable doubts raised during trial",
-      "Remind jury of the high burden of proof required",
-      "Point out the lack of direct evidence or witnesses to the crime",
-      "Appeal to presumption of innocence and constitutional rights"
+      { text: "Present alternative scenarios for the blood spatter pattern and lack of struggle", effectiveness: 'optimal' as EffectivenessLevel, scoreChange: 8 },
+      { text: "Introduce evidence of other people who had access to the apartment", effectiveness: 'decent' as EffectivenessLevel, scoreChange: 5 },
+      { text: "Challenge the prosecution's timeline with alibi witnesses", effectiveness: 'decent' as EffectivenessLevel, scoreChange: 3 },
+      { text: "Claim the victim was involved in dangerous activities that led to their death", effectiveness: 'weak' as EffectivenessLevel, scoreChange: -6 }
+    ]
+  },
+  5: {
+    prosecution: [
+      { text: "Systematically review all evidence and show how it points to one conclusion: guilt", effectiveness: 'optimal' as EffectivenessLevel, scoreChange: 6 },
+      { text: "Appeal to the jury's duty to deliver justice for the victim and community", effectiveness: 'decent' as EffectivenessLevel, scoreChange: 4 },
+      { text: "Address each defense argument with specific counter-evidence", effectiveness: 'decent' as EffectivenessLevel, scoreChange: 2 },
+      { text: "Make an emotional plea about the victim's life and family's suffering", effectiveness: 'weak' as EffectivenessLevel, scoreChange: -4 }
+    ],
+    defense: [
+      { text: "Systematically highlight every reasonable doubt raised during the trial", effectiveness: 'optimal' as EffectivenessLevel, scoreChange: 6 },
+      { text: "Remind the jury of the high burden of proof and presumption of innocence", effectiveness: 'decent' as EffectivenessLevel, scoreChange: 4 },
+      { text: "Point out the lack of direct evidence or witnesses to the actual crime", effectiveness: 'decent' as EffectivenessLevel, scoreChange: 2 },
+      { text: "Attack the prosecution for building a case on speculation and emotion", effectiveness: 'weak' as EffectivenessLevel, scoreChange: -3 }
     ]
   }
+};
+
+// Gandhi responses to player choices
+const gandhiResponses = {
+  optimal: [
+    "A strong argument, but let me address that point directly...",
+    "You raise a valid concern, however the evidence shows...",
+    "That's a sophisticated legal strategy, but consider this...",
+    "An excellent point that requires careful examination..."
+  ],
+  decent: [
+    "I understand your position, but the facts remain...",
+    "That's a reasonable argument, though it doesn't change...",
+    "You make a fair point, however we must focus on...",
+    "While that has merit, the evidence clearly indicates..."
+  ],
+  weak: [
+    "That argument lacks foundation in the evidence presented...",
+    "I'm afraid that approach undermines your credibility...",
+    "The jury will see through such desperate tactics...",
+    "That's exactly the kind of misdirection we expected..."
+  ]
 };
 
 export default function BattlePage() {
@@ -127,18 +184,25 @@ export default function BattlePage() {
   
   const [battleState, setBattleState] = useState<BattleState>({
     currentRound: 'opening',
+    roundNumber: 1,
+    totalRounds: 5,
     score: 0,
-    timeRemaining: 2700, // 45 minutes in seconds
-    gandhiArgument: gandhiArguments.opening[playerRole === 'defense' ? 'prosecution' : 'defense'],
-    playerOptions: responseOptions.opening[playerRole],
-    roundHistory: []
+    timeRemaining: 2700, // 45 minutes
+    choiceTimeRemaining: 30,
+    gandhiArgument: gandhiArguments[1][playerRole === 'defense' ? 'prosecution' : 'defense'],
+    playerOptions: responseOptions[1][playerRole],
+    showGandhiSpeech: true,
+    showResults: false,
+    lastChoice: null,
+    gamePhase: 'gandhi-speaking'
   });
 
-  const [showGandhiSpeech, setShowGandhiSpeech] = useState(true);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
 
-  // Timer effect
+  // Main game timer
   useEffect(() => {
+    if (battleState.gamePhase === 'game-over') return;
+    
     const timer = setInterval(() => {
       setBattleState(prev => ({
         ...prev,
@@ -147,7 +211,28 @@ export default function BattlePage() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [battleState.gamePhase]);
+
+  // Choice timer
+  useEffect(() => {
+    if (battleState.gamePhase !== 'player-choosing') return;
+    
+    const timer = setInterval(() => {
+      setBattleState(prev => {
+        if (prev.choiceTimeRemaining <= 1) {
+          // Auto-select weakest option if time runs out
+          handleOptionSelect(prev.playerOptions.length - 1, true);
+          return prev;
+        }
+        return {
+          ...prev,
+          choiceTimeRemaining: prev.choiceTimeRemaining - 1
+        };
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [battleState.gamePhase, battleState.choiceTimeRemaining]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -164,45 +249,94 @@ export default function BattlePage() {
   };
 
   const getScorePosition = (score: number) => {
-    // Convert score (-100 to 100) to percentage (0 to 100)
     return Math.max(0, Math.min(100, 50 + (score / 2)));
   };
 
-  const handleOptionSelect = (optionIndex: number) => {
-    setSelectedOption(optionIndex);
+  const getEffectivenessIcon = (effectiveness: EffectivenessLevel) => {
+    switch (effectiveness) {
+      case 'optimal': return <CheckCircle className="w-5 h-5 text-green-600" />;
+      case 'decent': return <AlertCircle className="w-5 h-5 text-yellow-600" />;
+      case 'weak': return <XCircle className="w-5 h-5 text-red-600" />;
+    }
   };
 
-  const handleSubmitResponse = () => {
-    if (selectedOption === null) return;
+  const getEffectivenessColor = (effectiveness: EffectivenessLevel) => {
+    switch (effectiveness) {
+      case 'optimal': return 'border-green-500 bg-green-50 text-green-800';
+      case 'decent': return 'border-yellow-500 bg-yellow-50 text-yellow-800';
+      case 'weak': return 'border-red-500 bg-red-50 text-red-800';
+    }
+  };
 
-    const selectedResponse = battleState.playerOptions[selectedOption];
-    const scoreChange = Math.floor(Math.random() * 21) - 10; // Random score change between -10 and +10
+  const handleOptionSelect = (optionIndex: number, autoSelected = false) => {
+    if (battleState.gamePhase !== 'player-choosing') return;
+    
+    setSelectedOption(optionIndex);
+    const selectedResponse = battleState.playerOptions[optionIndex];
+    
+    // Show results immediately
+    const gandhiResponseText = gandhiResponses[selectedResponse.effectiveness][
+      Math.floor(Math.random() * gandhiResponses[selectedResponse.effectiveness].length)
+    ];
 
-    // Add to history
-    const newHistory = [...battleState.roundHistory, {
-      round: battleState.currentRound,
-      gandhiArgument: battleState.gandhiArgument,
-      playerResponse: selectedResponse,
-      scoreChange
-    }];
-
-    // Determine next round
-    const rounds: BattleRound[] = ['opening', 'evidence', 'cross-examination', 'closing'];
-    const currentIndex = rounds.indexOf(battleState.currentRound);
-    const nextRound = currentIndex < rounds.length - 1 ? rounds[currentIndex + 1] : 'closing';
-
-    // Update battle state
     setBattleState(prev => ({
       ...prev,
-      currentRound: nextRound,
-      score: prev.score + scoreChange,
-      gandhiArgument: gandhiArguments[nextRound][playerRole === 'defense' ? 'prosecution' : 'defense'],
-      playerOptions: responseOptions[nextRound][playerRole],
-      roundHistory: newHistory
+      score: prev.score + selectedResponse.scoreChange,
+      lastChoice: {
+        option: selectedResponse,
+        effectiveness: selectedResponse.effectiveness,
+        gandhiResponse: gandhiResponseText
+      },
+      gamePhase: 'showing-results'
     }));
 
+    // Auto-advance after showing results
+    setTimeout(() => {
+      advanceToNextRound();
+    }, 4000);
+  };
+
+  const advanceToNextRound = () => {
+    setBattleState(prev => {
+      const nextRoundNumber = prev.roundNumber + 1;
+      
+      if (nextRoundNumber > prev.totalRounds) {
+        return {
+          ...prev,
+          gamePhase: 'game-over'
+        };
+      }
+
+      const oppositionRole = playerRole === 'defense' ? 'prosecution' : 'defense';
+      
+      return {
+        ...prev,
+        roundNumber: nextRoundNumber,
+        gandhiArgument: gandhiArguments[nextRoundNumber][oppositionRole],
+        playerOptions: responseOptions[nextRoundNumber][playerRole],
+        choiceTimeRemaining: 30,
+        gamePhase: 'gandhi-speaking',
+        lastChoice: null
+      };
+    });
+
     setSelectedOption(null);
-    setShowGandhiSpeech(true);
+    
+    // Auto-advance to player choosing after Gandhi speaks
+    setTimeout(() => {
+      setBattleState(prev => ({
+        ...prev,
+        gamePhase: 'player-choosing'
+      }));
+    }, 3000);
+  };
+
+  const handleGandhiSpeechEnd = () => {
+    setBattleState(prev => ({
+      ...prev,
+      gamePhase: 'player-choosing',
+      choiceTimeRemaining: 30
+    }));
   };
 
   if (!caseData) {
@@ -213,6 +347,32 @@ export default function BattlePage() {
           <Link href="/courtroom-battle">
             <Button className="bg-amber-600 hover:bg-amber-700">Back to Courtroom Battle</Button>
           </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (battleState.gamePhase === 'game-over') {
+    const finalVerdict = battleState.score > 0 ? 'Defense Wins!' : battleState.score < 0 ? 'Prosecution Wins!' : 'Hung Jury!';
+    const verdictColor = battleState.score > 0 ? 'text-green-600' : battleState.score < 0 ? 'text-red-600' : 'text-gray-600';
+    
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100 flex items-center justify-center">
+        <div className="bg-white rounded-xl shadow-lg p-8 max-w-md text-center border border-amber-200">
+          <Gavel className="w-16 h-16 text-amber-600 mx-auto mb-4" />
+          <h1 className={`text-3xl font-bold mb-4 ${verdictColor}`}>{finalVerdict}</h1>
+          <p className="text-gray-600 mb-2">Final Score: {battleState.score > 0 ? '+' : ''}{battleState.score}</p>
+          <p className="text-sm text-gray-500 mb-6">
+            You completed {battleState.totalRounds} rounds of legal argumentation
+          </p>
+          <div className="space-y-3">
+            <Link href={`/courtroom-battle/case-briefing/${caseId}`}>
+              <Button className="w-full bg-amber-600 hover:bg-amber-700">Try Again</Button>
+            </Link>
+            <Link href="/courtroom-battle">
+              <Button variant="outline" className="w-full">Choose New Case</Button>
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -247,10 +407,16 @@ export default function BattlePage() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
-              <span className="text-sm font-medium text-gray-600">Current Round:</span>
+              <span className="text-sm font-medium text-gray-600">Round:</span>
               <span className="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm font-medium">
-                {roundNames[battleState.currentRound]}
+                {battleState.roundNumber} of {battleState.totalRounds}
               </span>
+              {battleState.gamePhase === 'player-choosing' && (
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-red-500" />
+                  <span className="text-red-600 font-mono">{battleState.choiceTimeRemaining}s</span>
+                </div>
+              )}
             </div>
             <div className="text-sm text-gray-600">
               Playing as: <span className="font-medium capitalize text-amber-600">{playerRole}</span>
@@ -291,15 +457,35 @@ export default function BattlePage() {
               <h3 className="text-xl font-semibold text-gray-800">Your Response</h3>
             </div>
             
-            {showGandhiSpeech ? (
+            {battleState.gamePhase === 'gandhi-speaking' ? (
               <div className="text-center py-8">
                 <p className="text-gray-600 mb-4">Gandhi is presenting their argument...</p>
                 <Button 
-                  onClick={() => setShowGandhiSpeech(false)}
+                  onClick={handleGandhiSpeechEnd}
                   className="bg-amber-600 hover:bg-amber-700"
                 >
-                  View Response Options
+                  Continue
                 </Button>
+              </div>
+            ) : battleState.gamePhase === 'showing-results' ? (
+              <div className="space-y-4">
+                <div className={`p-4 rounded-lg border-2 ${getEffectivenessColor(battleState.lastChoice!.effectiveness)}`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    {getEffectivenessIcon(battleState.lastChoice!.effectiveness)}
+                    <span className="font-medium capitalize">{battleState.lastChoice!.effectiveness} Choice</span>
+                    <span className="text-sm">({battleState.lastChoice!.option.scoreChange > 0 ? '+' : ''}{battleState.lastChoice!.option.scoreChange} points)</span>
+                  </div>
+                  <p className="text-sm">{battleState.lastChoice!.option.text}</p>
+                </div>
+                
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <h4 className="font-medium text-gray-800 mb-2">Gandhi's Response:</h4>
+                  <p className="text-sm text-gray-700 italic">"{battleState.lastChoice!.gandhiResponse}"</p>
+                </div>
+                
+                <div className="text-center">
+                  <p className="text-sm text-gray-600">Advancing to next round...</p>
+                </div>
               </div>
             ) : (
               <div className="space-y-3">
@@ -308,30 +494,21 @@ export default function BattlePage() {
                   <button
                     key={index}
                     onClick={() => handleOptionSelect(index)}
+                    disabled={selectedOption !== null}
                     className={`w-full p-4 text-left rounded-lg border-2 transition-all ${
                       selectedOption === index
                         ? 'border-blue-500 bg-blue-50 text-blue-800'
                         : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
-                    }`}
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
                     <div className="flex items-start gap-3">
                       <span className="flex-shrink-0 w-6 h-6 bg-amber-100 text-amber-800 rounded-full flex items-center justify-center text-sm font-medium">
                         {index + 1}
                       </span>
-                      <span className="text-sm">{option}</span>
+                      <span className="text-sm">{option.text}</span>
                     </div>
                   </button>
                 ))}
-                
-                {selectedOption !== null && (
-                  <Button 
-                    onClick={handleSubmitResponse}
-                    className="w-full mt-4 bg-green-600 hover:bg-green-700"
-                  >
-                    Submit Response
-                    <ChevronRight className="w-4 h-4 ml-2" />
-                  </Button>
-                )}
               </div>
             )}
           </div>
@@ -346,16 +523,16 @@ export default function BattlePage() {
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                 <h4 className="font-semibold text-gray-800 mb-2">Case Progress</h4>
                 <div className="space-y-2 text-sm">
-                  {Object.entries(roundNames).map(([round, name]) => (
+                  {Array.from({ length: battleState.totalRounds }, (_, i) => i + 1).map((round) => (
                     <div key={round} className={`flex items-center gap-2 ${
-                      battleState.currentRound === round ? 'text-amber-600 font-medium' : 
-                      battleState.roundHistory.some(h => h.round === round) ? 'text-green-600' : 'text-gray-400'
+                      battleState.roundNumber === round ? 'text-amber-600 font-medium' : 
+                      battleState.roundNumber > round ? 'text-green-600' : 'text-gray-400'
                     }`}>
                       <div className={`w-2 h-2 rounded-full ${
-                        battleState.currentRound === round ? 'bg-amber-600' :
-                        battleState.roundHistory.some(h => h.round === round) ? 'bg-green-600' : 'bg-gray-300'
+                        battleState.roundNumber === round ? 'bg-amber-600' :
+                        battleState.roundNumber > round ? 'bg-green-600' : 'bg-gray-300'
                       }`}></div>
-                      <span>{name}</span>
+                      <span>Round {round}</span>
                     </div>
                   ))}
                 </div>
@@ -392,12 +569,12 @@ export default function BattlePage() {
               {/* Gandhi Status */}
               <div className="text-center">
                 <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm ${
-                  showGandhiSpeech ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                  battleState.gamePhase === 'gandhi-speaking' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
                 }`}>
                   <div className={`w-2 h-2 rounded-full ${
-                    showGandhiSpeech ? 'bg-green-500 animate-pulse' : 'bg-gray-400'
+                    battleState.gamePhase === 'gandhi-speaking' ? 'bg-green-500 animate-pulse' : 'bg-gray-400'
                   }`}></div>
-                  {showGandhiSpeech ? 'Speaking' : 'Waiting'}
+                  {battleState.gamePhase === 'gandhi-speaking' ? 'Speaking' : 'Waiting'}
                 </div>
               </div>
             </div>
