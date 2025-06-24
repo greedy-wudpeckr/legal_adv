@@ -96,3 +96,25 @@ export const getCaseById = (caseId: string): CaseScenario | undefined => {
 export const getCasesByCategory = (category: string): CaseScenario[] => {
   return sampleCases.filter(caseItem => caseItem.category === category);
 };
+
+export const getCasesByDifficulty = (difficulty: 'beginner' | 'intermediate' | 'advanced'): CaseScenario[] => {
+  return sampleCases.filter(caseItem => caseItem.difficulty === difficulty);
+};
+
+export const getCaseStats = () => {
+  const stats = {
+    total: sampleCases.length,
+    byDifficulty: {
+      beginner: sampleCases.filter(c => c.difficulty === 'beginner').length,
+      intermediate: sampleCases.filter(c => c.difficulty === 'intermediate').length,
+      advanced: sampleCases.filter(c => c.difficulty === 'advanced').length
+    },
+    byCategory: {
+      murder: sampleCases.filter(c => c.category === 'murder').length,
+      theft: sampleCases.filter(c => c.category === 'theft').length,
+      fraud: sampleCases.filter(c => c.category === 'fraud').length,
+      assault: sampleCases.filter(c => c.category === 'assault').length
+    }
+  };
+  return stats;
+};
