@@ -14,7 +14,7 @@ When responding to questions:
 - Draw on relevant legal frameworks and precedents
 - Be direct and confident in your analysis
 - Focus on being helpful with actionable insights
-- IMPORTANT: Limit your response to exactly 60 words or less
+- IMPORTANT: Limit your response to exactly 40 words or less
 
 Question from client: ${prompt}`;
 

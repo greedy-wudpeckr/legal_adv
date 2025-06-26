@@ -1,11 +1,10 @@
 "use client"
 
+import { Gavel, Scale } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Scale, Gavel, Home } from 'lucide-react';
 
 const navigationItems = [
-  { href: '/', label: 'Home', icon: Home },
   { href: '/courtroom-battle', label: 'Courtroom Battle', icon: Gavel },
 ];
 
@@ -13,13 +12,13 @@ export default function Navigation() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-amber-200 shadow-sm">
-      <div className="max-w-6xl mx-auto px-6">
-        <div className="flex items-center justify-between h-16">
+    <nav className="top-0 right-0 left-0 z-50 fixed bg-white/95 shadow-sm backdrop-blur-sm border-amber-200 border-b">
+      <div className="mx-auto px-6 max-w-6xl">
+        <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3">
             <Scale className="w-8 h-8 text-amber-600" />
-            <span className="text-xl font-bold text-gray-800">ApnaWakeel.ai</span>
+            <span className="font-bold text-gray-800 text-xl">ApnaWakeel.ai</span>
           </Link>
 
           {/* Navigation Links */}
