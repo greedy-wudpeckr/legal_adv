@@ -28,6 +28,7 @@ import { getCaseById } from '@/data/sample-cases';
 import { updatePlayerStats } from '@/lib/progression';
 import { addLeaderboardEntry } from '@/lib/leaderboard';
 import { soundManager } from '@/lib/sound-manager';
+import SharedNavigation from '@/components/shared-navigation';
 
 type BattlePhase = 'opening-statements' | 'evidence-presentation' | 'witness-examination' | 'closing-arguments';
 type PlayerRole = 'defense' | 'prosecution';
@@ -119,13 +120,24 @@ function GandhiSubtitle({ text, isVisible, duration = 4000 }: SubtitleProps) {
 
   return (
     <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-40 max-w-4xl mx-auto px-4">
-      <div className="bg-black/80 backdrop-blur-sm px-6 py-3 rounded-lg">
+      <div className="bg-black/80 backdrop-blur-sm px-6 py-3 rounded-lg border border-amber-200/30">
         <p className="text-white text-center text-lg font-medium leading-relaxed">
           {displayText}
           {currentWordIndex < words.length - 1 && (
-            <span className="inline-block w-1 h-5 bg-white ml-1 animate-pulse" />
+            <span className="inline-block w-1 h-5 bg-amber-400 ml-1 animate-pulse" />
           )}
         </p>
+        {/* Progress indicator */}
+        {words.length > 0 && (
+          <div className="mt-3 w-full bg-gray-600/50 rounded-full h-1">
+            <div 
+              className="bg-amber-400 h-1 rounded-full transition-all duration-200 ease-out"
+              style={{ 
+                width: `${((currentWordIndex + 1) / words.length) * 100}%` 
+              }}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -862,27 +874,15 @@ export default function BattlePage() {
       battleState.flashEffect === 'green' ? 'bg-green-100' : 
       battleState.flashEffect === 'red' ? 'bg-red-100' : ''
     }`}>
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b border-amber-200">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <Link href={`/courtroom-battle/case-briefing/${caseId}`} className="flex items-center gap-2 text-amber-600 hover:text-amber-700 transition-colors">
-              <ArrowLeft className="w-5 h-5" />
-              <span className="font-medium">Back to Briefing</span>
-            </Link>
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2 text-gray-600">
-                <Clock className="w-5 h-5" />
-                <span className="font-mono text-lg">{formatTime(battleState.timeRemaining)}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Scale className="w-8 h-8 text-amber-600" />
-                <h1 className="text-2xl font-bold text-gray-800">{caseData.title}</h1>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <SharedNavigation 
+        platform="apnawaqeel"
+        breadcrumbs={[
+          { label: 'Legal Education', href: '/legal' },
+          { label: 'Courtroom Battle', href: '/courtroom-battle' },
+          { label: 'Case Briefing', href: `/courtroom-battle/case-briefing/${caseId}` },
+          { label: 'Battle' }
+        ]}
+      />
 
       {/* Phase Status Bar */}
       <div className="bg-white border-b border-amber-200 py-4">
@@ -906,8 +906,14 @@ export default function BattlePage() {
                 </div>
               )}
             </div>
-            <div className="text-sm text-gray-600">
-              Playing as: <span className="font-medium capitalize text-amber-600">{playerRole}</span>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 text-gray-600">
+                <Clock className="w-5 h-5" />
+                <span className="font-mono text-lg">{formatTime(battleState.timeRemaining)}</span>
+              </div>
+              <div className="text-sm text-gray-600">
+                Playing as: <span className="font-medium capitalize text-amber-600">{playerRole}</span>
+              </div>
             </div>
           </div>
           
@@ -1000,7 +1006,7 @@ export default function BattlePage() {
                     key={index}
                     onClick={() => handleOptionSelect(index)}
                     disabled={selectedOption !== null}
-                    className={`w-full p-4 text-left rounded-lg border-2 transition-all ${
+                    className={`w-full p-4 text-left rounded-lg border-2 transition-all duration-200 hover:scale-105 ${
                       selectedOption === index
                         ? 'border-blue-500 bg-blue-50 text-blue-800'
                         : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'

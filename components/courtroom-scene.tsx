@@ -38,5 +38,5 @@ export default function GandhiModel({ speaking }: GandhiModelProps) {
     });
   });
 
-  return <primitive ref={modelRef} object={scene} scale={1} position={[0, -0.5, 2]} />;
+  return <primitive ref={modelRef} object={scene} scale={1} position={[0, -0.4, 2]} />;
 }

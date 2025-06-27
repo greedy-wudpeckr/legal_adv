@@ -9,7 +9,7 @@ import { FeaturesGrid } from '@/components/home/Features';
 export default function Home() {
     return (
         <>
-            <SmoothCursor/>
+            {/* <SmoothCursor/> */}
             <Navbar />
             <HeroSection />
             <Stats />
