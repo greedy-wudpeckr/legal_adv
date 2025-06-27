@@ -1,8 +1,8 @@
 "use client";
 
-import { Dispatch, SetStateAction, useEffect, useState } from 'react';
+import { Dispatch, SetStateAction, useEffect, useState, useRef } from 'react';
 
-import { Scale , Send , Loader2 , X,Square , Play , Pause , Volume2 , VolumeX} from 'lucide-react';
+import { Scale , Send , Loader2 , X, Square , Play , Pause , Volume2 , VolumeX, Mic, MicOff} from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -63,19 +63,46 @@ function TypewriterEffect({ text, isPlaying }: { text: string; isPlaying: boolea
   );
 }
 
-
 const caseQuerySchema = z.object({
   caseQuery: z.string().min(1, "Case query is required"),
 });
 
-
 type CaseQueryForm = z.infer<typeof caseQuerySchema>;
-
 
 interface Props {
   setSpeaking: Dispatch<SetStateAction<boolean>>;
 }
 
+// Speech recognition interface for TypeScript
+interface SpeechRecognitionEvent extends Event {
+  results: SpeechRecognitionResultList;
+  resultIndex: number;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string;
+  message: string;
+}
+
+interface SpeechRecognition extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  start(): void;
+  stop(): void;
+  abort(): void;
+  onstart: ((this: SpeechRecognition, ev: Event) => any) | null;
+  onend: ((this: SpeechRecognition, ev: Event) => any) | null;
+  onresult: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => any) | null;
+  onerror: ((this: SpeechRecognition, ev: SpeechRecognitionErrorEvent) => any) | null;
+}
+
+declare global {
+  interface Window {
+    SpeechRecognition: new () => SpeechRecognition;
+    webkitSpeechRecognition: new () => SpeechRecognition;
+  }
+}
 
 export default function CaseQueryForm({ setSpeaking }: Props) {
   const { toast } = useToast();
@@ -87,14 +114,114 @@ export default function CaseQueryForm({ setSpeaking }: Props) {
   const [audioDuration, setAudioDuration] = useState(0);
   const [audioEnabled, setAudioEnabled] = useState(true);
 
+  // Speech recognition states
+  const [isListening, setIsListening] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  const [interimTranscript, setInterimTranscript] = useState('');
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<CaseQueryForm>({
     resolver: zodResolver(caseQuerySchema),
   });
+
+  const currentQuery = watch('caseQuery');
+
+  // Initialize speech recognition
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      
+      if (SpeechRecognition) {
+        setSpeechSupported(true);
+        const recognition = new SpeechRecognition();
+        
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+
+        recognition.onstart = () => {
+          setIsListening(true);
+          setTranscript('');
+          setInterimTranscript('');
+        };
+
+        recognition.onresult = (event: SpeechRecognitionEvent) => {
+          let finalTranscript = '';
+          let interimTranscript = '';
+
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const result = event.results[i];
+            if (result.isFinal) {
+              finalTranscript += result[0].transcript;
+            } else {
+              interimTranscript += result[0].transcript;
+            }
+          }
+
+          setTranscript(prev => prev + finalTranscript);
+          setInterimTranscript(interimTranscript);
+
+          // Update the form field with the final transcript
+          if (finalTranscript) {
+            const currentValue = currentQuery || '';
+            const newValue = currentValue + finalTranscript;
+            setValue('caseQuery', newValue.trim());
+          }
+        };
+
+        recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+          console.error('Speech recognition error:', event.error);
+          setIsListening(false);
+          
+          let errorMessage = 'Speech recognition failed. Please try again.';
+          
+          switch (event.error) {
+            case 'not-allowed':
+              errorMessage = 'Microphone access denied. Please enable microphone permissions.';
+              break;
+            case 'no-speech':
+              errorMessage = 'No speech detected. Please try speaking again.';
+              break;
+            case 'audio-capture':
+              errorMessage = 'No microphone found. Please check your audio settings.';
+              break;
+            case 'network':
+              errorMessage = 'Network error occurred. Please check your connection.';
+              break;
+          }
+
+          toast({
+            title: "Speech Recognition Error",
+            description: errorMessage,
+            variant: "destructive",
+          });
+        };
+
+        recognition.onend = () => {
+          setIsListening(false);
+          setInterimTranscript('');
+        };
+
+        recognitionRef.current = recognition;
+      } else {
+        setSpeechSupported(false);
+      }
+    }
+
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.abort();
+      }
+    };
+  }, [setValue, currentQuery, toast]);
 
   // Cleanup audio on component unmount
   useEffect(() => {
@@ -103,8 +230,11 @@ export default function CaseQueryForm({ setSpeaking }: Props) {
         audioObj.pause();
         audioObj.src = '';
       }
+      if (recognitionRef.current && isListening) {
+        recognitionRef.current.stop();
+      }
     };
-  }, [audioObj]);
+  }, [audioObj, isListening]);
 
   // Update audio progress
   useEffect(() => {
@@ -130,10 +260,51 @@ export default function CaseQueryForm({ setSpeaking }: Props) {
     };
   }, [audioObj]);
 
+  const startListening = () => {
+    if (!speechSupported) {
+      toast({
+        title: "Not Supported",
+        description: "Speech recognition is not supported in your browser.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (recognitionRef.current && !isListening) {
+      try {
+        recognitionRef.current.start();
+      } catch (error) {
+        console.error('Error starting speech recognition:', error);
+        toast({
+          title: "Error",
+          description: "Failed to start speech recognition. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const stopListening = () => {
+    if (recognitionRef.current && isListening) {
+      recognitionRef.current.stop();
+    }
+  };
+
+  const toggleListening = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening();
+    }
+  };
+
   const onSubmit = async (data: CaseQueryForm) => {
     try {
-      // Stop any currently playing audio before starting new one
+      // Stop any currently playing audio and listening before starting new one
       stopAudio();
+      if (isListening) {
+        stopListening();
+      }
 
       // Get Gemini response
       const res = await fetch('/api/gemini', {
@@ -212,7 +383,6 @@ export default function CaseQueryForm({ setSpeaking }: Props) {
     }
   };
 
-
   // Toggle audio enabled/disabled
   const toggleAudioEnabled = () => {
     if (audioObj && !audioObj.paused) {
@@ -261,7 +431,7 @@ export default function CaseQueryForm({ setSpeaking }: Props) {
     setResponseText('');
   };
 
-    const clearResponse1 = () => {
+  const clearResponse1 = () => {
     setResponseText('');
   };
 
@@ -282,7 +452,6 @@ export default function CaseQueryForm({ setSpeaking }: Props) {
               <VolumeX className="w-4 h-4 text-gray-500" />
             )}
           </Button>
-
         </div>
         
         <Button
@@ -334,15 +503,54 @@ export default function CaseQueryForm({ setSpeaking }: Props) {
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <Input
-            id="caseQuery"
-            type="text"
-            placeholder="Enter your legal query..."
-            className={`w-full px-4 py-3 border rounded-lg transition-all ${
-              errors.caseQuery ? "border-red-500 bg-red-50" : "border-gray-300 bg-white"
-            } focus:border-black focus:ring-black`}
-            {...register("caseQuery")}
-          />
+          <div className="relative">
+            <Input
+              id="caseQuery"
+              type="text"
+              placeholder="Enter your legal query or use the microphone..."
+              className={`w-full px-4 py-3 pr-12 border rounded-lg transition-all ${
+                errors.caseQuery ? "border-red-500 bg-red-50" : "border-gray-300 bg-white"
+              } focus:border-black focus:ring-black`}
+              {...register("caseQuery")}
+            />
+            
+            {/* Microphone Button */}
+            {speechSupported && (
+              <Button
+                type="button"
+                onClick={toggleListening}
+                disabled={isSubmitting}
+                className={`absolute right-2 top-1/2 transform -translate-y-1/2 p-2 h-8 w-8 rounded-full transition-all duration-200 ${
+                  isListening 
+                    ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse' 
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                }`}
+                title={isListening ? "Stop recording" : "Start voice input"}
+              >
+                {isListening ? (
+                  <MicOff className="w-4 h-4" />
+                ) : (
+                  <Mic className="w-4 h-4" />
+                )}
+              </Button>
+            )}
+          </div>
+
+          {/* Speech Recognition Status */}
+          {isListening && (
+            <div className="flex items-center gap-2 text-sm text-blue-600 bg-blue-50 p-2 rounded-lg">
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+              <span>Listening... {interimTranscript && `"${interimTranscript}"`}</span>
+            </div>
+          )}
+
+          {/* Speech Recognition Not Supported Warning */}
+          {!speechSupported && (
+            <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded-lg">
+              Voice input not supported in this browser. Please use Chrome, Edge, or Safari for voice features.
+            </div>
+          )}
+
           {errors.caseQuery && (
             <p className="mt-1 text-red-600 text-sm">
               {errors.caseQuery.message}
@@ -351,13 +559,18 @@ export default function CaseQueryForm({ setSpeaking }: Props) {
 
           <Button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || isListening}
             className="bg-black hover:bg-gray-800 disabled:opacity-50 px-6 py-3 rounded-lg w-full font-semibold text-white transition-colors duration-200"
           >
             {isSubmitting ? (
               <div className="flex items-center gap-2">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 Submitting...
+              </div>
+            ) : isListening ? (
+              <div className="flex items-center gap-2">
+                <Mic className="w-4 h-4 animate-pulse" />
+                Listening...
               </div>
             ) : (
               <div className="flex items-center gap-2">
@@ -369,9 +582,8 @@ export default function CaseQueryForm({ setSpeaking }: Props) {
         </form>
       </div>
 
-
       {/* YouTube-Style Caption Overlay */}
-      {responseText && isPlaying &&(
+      {responseText && isPlaying && (
         <div className="fixed bottom-6 right-6 z-50 max-w-sm pointer-events-none">
           <div className="bg-black/90 backdrop-blur-sm text-white rounded-lg shadow-2xl border border-white/10">
             {/* Caption Header */}
@@ -395,7 +607,6 @@ export default function CaseQueryForm({ setSpeaking }: Props) {
               </button>
             </div>
 
-
             {/* Caption Text */}
             <div className="px-4 py-3 max-h-40 overflow-y-auto">
               <div className="text-sm leading-relaxed text-white">
@@ -406,11 +617,9 @@ export default function CaseQueryForm({ setSpeaking }: Props) {
                 )}
               </div>
             </div>
-
           </div>
         </div>
       )}
     </div>
   );
 }
-
