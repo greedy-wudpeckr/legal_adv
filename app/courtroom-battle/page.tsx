@@ -110,13 +110,6 @@ export default function CourtroomBattle() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
-      <SharedNavigation 
-        platform="apnawaqeel"
-        breadcrumbs={[
-          { label: 'Legal Education', href: '/legal' },
-          { label: 'Courtroom Battle' }
-        ]}
-      />
 
       {/* Main Content */}
       <div className="max-w-6xl mx-auto px-6 py-12">

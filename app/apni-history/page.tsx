@@ -18,7 +18,6 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { historicalPeriods, historicalFigures } from '@/data/historical-data';
-import SharedNavigation from '@/components/shared-navigation';
 import QuickFactsCard from '@/components/ui/quick-facts-card';
 import SettingsPanel from '@/components/ui/settings-panel';
 import HelpOverlay from '@/components/ui/help-overlay';
@@ -104,12 +103,6 @@ export default function ApniHistoryPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <SharedNavigation 
-        platform="apnihistory"
-        breadcrumbs={[
-          { label: 'History Education' }
-        ]}
-      />
 
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-br from-white to-gray-50 py-20">

@@ -12,12 +12,6 @@ export default function LegalHome() {
 
   return (
     <div className="relative overflow-hidden bg-cover bg-center w-full h-screen" style={{ backgroundImage: "url('/courtroom-bg.png')" }}>
-      <SharedNavigation 
-        platform="apnawaqeel"
-        breadcrumbs={[
-          { label: 'Legal Education', href: '/legal' }
-        ]}
-      />
 
       <Canvas camera={{ position: [0, 1.5, 3] }}>
         <ambientLight intensity={2} />

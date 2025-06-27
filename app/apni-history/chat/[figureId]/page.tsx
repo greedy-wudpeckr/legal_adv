@@ -72,28 +72,6 @@ export default function ChatWithFigurePage() {
 
   return (
 <div className="h-screen bg-white flex flex-col overflow-hidden"> {/* Added overflow-hidden */}
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200 flex-shrink-0">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/apni-history/explore" className="flex items-center gap-2 text-gray-600 hover:text-black transition-colors">
-              <ArrowLeft className="w-5 h-5" />
-              <span className="font-medium">Back to Figures</span>
-            </Link>
-            <div className="flex items-center gap-3">
-              <Crown className="w-8 h-8 text-black" />
-              <div>
-                <h1 className="text-xl font-bold text-black">{figure.name}</h1>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Calendar className="w-4 h-4" />
-                  <span>{figure.timeRange}</span>
-                </div>
-              </div>
-            </div>
-            <div className="w-24"></div> {/* Spacer for balance */}
-          </div>
-        </div>
-      </div>
 
       {/* Main Content */}
       <div className="flex-1 flex min-h-0"> {/* Added min-h-0 to prevent flex item growth */}
