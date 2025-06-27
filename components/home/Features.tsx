@@ -25,9 +25,8 @@ export const FeaturesGrid = () => {
             />
             <div className="gap-6 grid sm:grid-cols-2 lg:grid-cols-3 bg-black mt-10 p-6">
                 {cards.map((card, index) => (
-                    <CardSpotlight>
+                    <CardSpotlight key={index}>
                         <FeatureCard
-                            key={index}
                             title={card.title}
                             description={card.description}
                         />
