@@ -10,7 +10,7 @@ import "./page.css"
 export default function Home() {
     return (
         <>
-            <SmoothCursor/>
+            {/* <SmoothCursor/> */}
             <Navbar />
             <HeroSection />
             <Stats />
