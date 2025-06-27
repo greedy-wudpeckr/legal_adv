@@ -4,6 +4,9 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Space+Grotesk:wght@300..700&display=swap');
 
+/* Import custom navbar styles */
+@import '../styles/navbar-custom.css';
+
 body {
   font-family: Arial, Helvetica, sans-serif;
 }
@@ -49,7 +52,16 @@ body {
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Custom navbar theme variables */
+    --navbar-bg: rgba(255, 255, 255, 0.95);
+    --navbar-border: #c9cfd1;
+    --navbar-text: #000000;
+    --navbar-text-hover: #4a5568;
+    --navbar-accent: rgba(201, 207, 209, 0.2);
+    --navbar-accent-hover: rgba(201, 207, 209, 0.3);
   }
+  
   .dark {
     --background: 0 0% 3.9%;
     --foreground: 0 0% 98%;
