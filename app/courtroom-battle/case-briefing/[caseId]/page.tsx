@@ -18,6 +18,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { getCaseById } from '@/data/sample-cases';
 import { CaseBriefing } from '@/types/case';
+import SharedNavigation from '@/components/shared-navigation';
 
 export default function CaseBriefingPage() {
   const params = useParams();
@@ -85,21 +86,14 @@ export default function CaseBriefingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b border-amber-200">
-        <div className="max-w-6xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/courtroom-battle" className="flex items-center gap-2 text-amber-600 hover:text-amber-700 transition-colors">
-              <ArrowLeft className="w-5 h-5" />
-              <span className="font-medium">Back to Cases</span>
-            </Link>
-            <div className="flex items-center gap-3">
-              <Scale className="w-8 h-8 text-amber-600" />
-              <h1 className="text-2xl font-bold text-gray-800">Case Briefing</h1>
-            </div>
-          </div>
-        </div>
-      </div>
+      <SharedNavigation 
+        platform="apnawaqeel"
+        breadcrumbs={[
+          { label: 'Legal Education', href: '/legal' },
+          { label: 'Courtroom Battle', href: '/courtroom-battle' },
+          { label: 'Case Briefing' }
+        ]}
+      />
 
       <div className="max-w-6xl mx-auto px-6 py-8">
         {/* Case Header */}
@@ -130,10 +124,10 @@ export default function CaseBriefingPage() {
             <div className="grid md:grid-cols-2 gap-4">
               <button
                 onClick={() => setSelectedRole('defense')}
-                className={`p-4 rounded-lg border-2 text-left transition-all ${
+                className={`p-4 rounded-lg border-2 text-left transition-all duration-200 hover:scale-105 ${
                   selectedRole === 'defense'
-                    ? 'border-blue-500 bg-blue-50 text-blue-800'
-                    : 'border-gray-200 hover:border-blue-300'
+                    ? 'border-blue-500 bg-blue-50 text-blue-800 shadow-md'
+                    : 'border-gray-200 hover:border-blue-300 hover:shadow-sm'
                 }`}
               >
                 <h4 className="font-semibold mb-2">Defense Attorney</h4>
@@ -141,10 +135,10 @@ export default function CaseBriefingPage() {
               </button>
               <button
                 onClick={() => setSelectedRole('prosecution')}
-                className={`p-4 rounded-lg border-2 text-left transition-all ${
+                className={`p-4 rounded-lg border-2 text-left transition-all duration-200 hover:scale-105 ${
                   selectedRole === 'prosecution'
-                    ? 'border-red-500 bg-red-50 text-red-800'
-                    : 'border-gray-200 hover:border-red-300'
+                    ? 'border-red-500 bg-red-50 text-red-800 shadow-md'
+                    : 'border-gray-200 hover:border-red-300 hover:shadow-sm'
                 }`}
               >
                 <h4 className="font-semibold mb-2">Prosecutor</h4>
@@ -156,7 +150,7 @@ export default function CaseBriefingPage() {
 
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Prosecution Opening */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-amber-200">
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-amber-200 hover:shadow-xl transition-shadow duration-200">
             <div className="flex items-center gap-3 mb-4">
               <Scale className="w-6 h-6 text-red-600" />
               <h3 className="text-xl font-semibold text-gray-800">Prosecution's Opening Statement</h3>
@@ -167,7 +161,7 @@ export default function CaseBriefingPage() {
           </div>
 
           {/* Your Objectives */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-amber-200">
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-amber-200 hover:shadow-xl transition-shadow duration-200">
             <div className="flex items-center gap-3 mb-4">
               <Target className="w-6 h-6 text-amber-600" />
               <h3 className="text-xl font-semibold text-gray-800">Your Objectives</h3>
@@ -185,14 +179,14 @@ export default function CaseBriefingPage() {
 
         <div className="grid lg:grid-cols-2 gap-8 mt-8">
           {/* Evidence Overview */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-amber-200">
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-amber-200 hover:shadow-xl transition-shadow duration-200">
             <div className="flex items-center gap-3 mb-4">
               <FileText className="w-6 h-6 text-blue-600" />
               <h3 className="text-xl font-semibold text-gray-800">Evidence Available</h3>
             </div>
             <div className="space-y-3">
               {caseData.evidenceList.slice(0, 3).map((evidence) => (
-                <div key={evidence.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div key={evidence.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
                   <div>
                     <h4 className="font-medium text-gray-800">{evidence.title}</h4>
                     <p className="text-sm text-gray-600">{evidence.type}</p>
@@ -213,14 +207,14 @@ export default function CaseBriefingPage() {
           </div>
 
           {/* Witnesses Overview */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-amber-200">
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-amber-200 hover:shadow-xl transition-shadow duration-200">
             <div className="flex items-center gap-3 mb-4">
               <Users className="w-6 h-6 text-purple-600" />
               <h3 className="text-xl font-semibold text-gray-800">Key Witnesses</h3>
             </div>
             <div className="space-y-3">
               {caseData.witnesses.slice(0, 3).map((witness) => (
-                <div key={witness.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div key={witness.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
                   <div>
                     <h4 className="font-medium text-gray-800">{witness.name}</h4>
                     <p className="text-sm text-gray-600">{witness.role}</p>
@@ -242,14 +236,14 @@ export default function CaseBriefingPage() {
         </div>
 
         {/* Strategy Tips */}
-        <div className="bg-white rounded-xl shadow-lg p-6 mt-8 border border-amber-200">
+        <div className="bg-white rounded-xl shadow-lg p-6 mt-8 border border-amber-200 hover:shadow-xl transition-shadow duration-200">
           <div className="flex items-center gap-3 mb-4">
             <AlertTriangle className="w-6 h-6 text-orange-600" />
             <h3 className="text-xl font-semibold text-gray-800">Strategy Tips</h3>
           </div>
           <div className="grid md:grid-cols-2 gap-4">
             {briefing.tips.map((tip, index) => (
-              <div key={index} className="flex items-start gap-2">
+              <div key={index} className="flex items-start gap-2 p-3 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors duration-200">
                 <div className="w-2 h-2 bg-amber-500 rounded-full mt-2"></div>
                 <span className="text-gray-700">{tip}</span>
               </div>

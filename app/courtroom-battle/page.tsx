@@ -2,12 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Scale, Gavel, ArrowLeft, Play, Star, Clock, Target, TrendingUp, Trophy, Lock, Unlock } from 'lucide-react';
+import { Scale, Gavel, Play, Star, Clock, Target, TrendingUp, Trophy, Lock, Unlock, Settings, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { sampleCases, getCaseStats } from '@/data/sample-cases';
 import { getPlayerStats } from '@/lib/progression';
 import { PlayerStats } from '@/types/progression';
 import PlayerStatsComponent from '@/components/player-stats';
+import SharedNavigation from '@/components/shared-navigation';
+import QuickFactsCard from '@/components/ui/quick-facts-card';
+import SettingsPanel from '@/components/ui/settings-panel';
+import HelpOverlay from '@/components/ui/help-overlay';
 
 const caseCategories = [
   { id: 'murder', name: 'Murder', description: 'Homicide and related charges', color: 'bg-red-100 border-red-300 text-red-800' },
@@ -22,11 +26,46 @@ const difficultyLevels = [
   { id: 'advanced', name: 'Advanced', description: 'Sophisticated crimes, circumstantial evidence', color: 'bg-red-100 border-red-300 text-red-800', icon: '⭐⭐⭐' },
 ];
 
+const helpSections = [
+  {
+    title: 'Getting Started',
+    content: 'Learn the basics of courtroom battles and how to navigate the interface.',
+    steps: [
+      'Choose a case from the available options',
+      'Review the case briefing and evidence',
+      'Select your role as defense or prosecution',
+      'Enter the courtroom and make strategic choices'
+    ]
+  },
+  {
+    title: 'Case Strategy',
+    content: 'Master the art of legal strategy and courtroom tactics.',
+    steps: [
+      'Analyze evidence carefully for strengths and weaknesses',
+      'Consider the timing of your arguments',
+      'Adapt your strategy based on Gandhi\'s responses',
+      'Use hints wisely to improve your performance'
+    ]
+  },
+  {
+    title: 'Scoring System',
+    content: 'Understand how your performance is evaluated and scored.',
+    steps: [
+      'Perfect choices earn maximum points',
+      'Good choices earn moderate points',
+      'Weak choices may lose points',
+      'Bad choices significantly hurt your score'
+    ]
+  }
+];
+
 export default function CourtroomBattle() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedDifficulty, setSelectedDifficulty] = useState<string | null>(null);
   const [playerStats, setPlayerStats] = useState<PlayerStats | null>(null);
   const [showStatsModal, setShowStatsModal] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   useEffect(() => {
     setPlayerStats(getPlayerStats());
@@ -71,29 +110,13 @@ export default function CourtroomBattle() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b border-amber-200">
-        <div className="max-w-6xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2 text-amber-600 hover:text-amber-700 transition-colors">
-              <ArrowLeft className="w-5 h-5" />
-              <span className="font-medium">Back to Home</span>
-            </Link>
-            <div className="flex items-center gap-3">
-              <Scale className="w-8 h-8 text-amber-600" />
-              <h1 className="text-2xl font-bold text-gray-800">ApnaWakeel.ai</h1>
-            </div>
-            <Button 
-              onClick={() => setShowStatsModal(true)}
-              variant="outline"
-              className="border-amber-300 text-amber-700 hover:bg-amber-50"
-            >
-              <Trophy className="w-4 h-4 mr-2" />
-              Profile
-            </Button>
-          </div>
-        </div>
-      </div>
+      <SharedNavigation 
+        platform="apnawaqeel"
+        breadcrumbs={[
+          { label: 'Legal Education', href: '/legal' },
+          { label: 'Courtroom Battle' }
+        ]}
+      />
 
       {/* Main Content */}
       <div className="max-w-6xl mx-auto px-6 py-12">
@@ -106,41 +129,64 @@ export default function CourtroomBattle() {
             Master legal advocacy through realistic courtroom simulations with increasing difficulty
           </p>
           
+          {/* Action Buttons */}
+          <div className="flex items-center justify-center gap-4 mb-6">
+            <Button 
+              onClick={() => setShowStatsModal(true)}
+              variant="outline"
+              className="border-amber-300 text-amber-700 hover:bg-amber-50"
+            >
+              <Trophy className="w-4 h-4 mr-2" />
+              Profile
+            </Button>
+            <Button 
+              onClick={() => setShowSettings(true)}
+              variant="outline"
+              className="border-amber-300 text-amber-700 hover:bg-amber-50"
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              Settings
+            </Button>
+            <Button 
+              onClick={() => setShowHelp(true)}
+              variant="outline"
+              className="border-amber-300 text-amber-700 hover:bg-amber-50"
+            >
+              <HelpCircle className="w-4 h-4 mr-2" />
+              Help
+            </Button>
+          </div>
+          
           {/* Player Progress Summary */}
           {playerStats && (
-            <div className="bg-white rounded-lg p-4 border border-amber-200 max-w-md mx-auto mb-6">
-              <div className="flex items-center justify-center gap-4 text-sm">
-                <div className="text-center">
-                  <div className="text-lg font-bold text-amber-600">Level {playerStats.level}</div>
-                  <div className="text-gray-600">Current Level</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-lg font-bold text-green-600">{playerStats.casesWon}</div>
-                  <div className="text-gray-600">Cases Won</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-lg font-bold text-blue-600">{playerStats.currentWinStreak}</div>
-                  <div className="text-gray-600">Win Streak</div>
-                </div>
-              </div>
-            </div>
+            <QuickFactsCard
+              title="Your Progress"
+              facts={[
+                { label: 'Current Level', value: `Level ${playerStats.level}`, icon: Trophy },
+                { label: 'Cases Won', value: playerStats.casesWon.toString(), icon: Star },
+                { label: 'Win Streak', value: playerStats.currentWinStreak.toString(), icon: TrendingUp },
+                { label: 'Accuracy', value: `${Math.round((playerStats.perfectChoices / Math.max(playerStats.totalChoices, 1)) * 100)}%`, icon: Target }
+              ]}
+              theme="amber"
+              className="max-w-md mx-auto mb-6"
+            />
           )}
           
           {/* Case Statistics */}
           <div className="grid md:grid-cols-4 gap-4 max-w-2xl mx-auto">
-            <div className="bg-white rounded-lg p-4 border border-amber-200">
+            <div className="bg-white rounded-lg p-4 border border-amber-200 shadow-sm hover:shadow-md transition-shadow">
               <div className="text-2xl font-bold text-amber-600">{stats.total}</div>
               <div className="text-sm text-gray-600">Total Cases</div>
             </div>
-            <div className="bg-white rounded-lg p-4 border border-green-200">
+            <div className="bg-white rounded-lg p-4 border border-green-200 shadow-sm hover:shadow-md transition-shadow">
               <div className="text-2xl font-bold text-green-600">{stats.byDifficulty.beginner}</div>
               <div className="text-sm text-gray-600">Beginner</div>
             </div>
-            <div className="bg-white rounded-lg p-4 border border-yellow-200">
+            <div className="bg-white rounded-lg p-4 border border-yellow-200 shadow-sm hover:shadow-md transition-shadow">
               <div className="text-2xl font-bold text-yellow-600">{stats.byDifficulty.intermediate}</div>
               <div className="text-sm text-gray-600">Intermediate</div>
             </div>
-            <div className="bg-white rounded-lg p-4 border border-red-200">
+            <div className="bg-white rounded-lg p-4 border border-red-200 shadow-sm hover:shadow-md transition-shadow">
               <div className="text-2xl font-bold text-red-600">{stats.byDifficulty.advanced}</div>
               <div className="text-sm text-gray-600">Advanced</div>
             </div>
@@ -365,10 +411,24 @@ export default function CourtroomBattle() {
         </div>
       </div>
 
-      {/* Stats Modal */}
+      {/* Modals */}
       {showStatsModal && (
         <PlayerStatsComponent onClose={() => setShowStatsModal(false)} />
       )}
+      
+      <SettingsPanel 
+        isVisible={showSettings}
+        onClose={() => setShowSettings(false)}
+        theme="amber"
+      />
+      
+      <HelpOverlay
+        isVisible={showHelp}
+        onClose={() => setShowHelp(false)}
+        title="Courtroom Battle Help"
+        sections={helpSections}
+        theme="amber"
+      />
     </div>
   );
 }
