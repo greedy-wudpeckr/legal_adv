@@ -85,29 +85,31 @@ export default function ApniHistoryPage() {
   const [showHelp, setShowHelp] = useState(false);
 
   return (
-    <Layout>
-      <div className="min-h-screen bg-white">
-        {/* Hero Section */}
-        <section className="relative overflow-hidden bg-gradient-to-br from-white to-gray-50 py-20">
-          <div className="absolute inset-0 bg-gradient-to-r from-gray-100/20 to-gray-200/20"></div>
-          <div className="relative max-w-7xl mx-auto px-6 text-center">
-            <div className="flex items-center justify-center gap-3 mb-6">
-              <div className="p-3 bg-black rounded-full">
-                <Sparkles className="w-8 h-8 text-white" />
-              </div>
-              <h1 className="text-4xl md:text-6xl font-bold text-black">
-                Discover History
-              </h1>
+    <div className="min-h-screen bg-white">
+
+      {/* Hero Section */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-white to-gray-50 py-20">
+        <div className="absolute inset-0 bg-gradient-to-r from-gray-100/20 to-gray-200/20"></div>
+        <div className="relative max-w-7xl mx-auto px-6 text-center">
+          <div className="flex items-center justify-center gap-3 mb-6">
+            <div className="p-3 bg-black rounded-full">
+              <Sparkles className="w-8 h-8 text-white" />
             </div>
-            <p className="text-xl md:text-2xl text-gray-700 mb-4 max-w-3xl mx-auto">
-              Journey through time and explore the rich tapestry of Indian civilization
-            </p>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
-              From ancient empires to modern independence, experience history through 
-              interactive storytelling and immersive learning.
-            </p>
+            <h1 className="text-4xl md:text-6xl font-bold text-black">
+              Discover History
+            </h1>
           </div>
-        </section>
+          <p className="text-xl md:text-2xl text-gray-700 mb-4 max-w-3xl mx-auto">
+            Journey through time and explore the rich tapestry of Indian civilization
+          </p>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
+            From ancient empires to modern independence, experience history through 
+            interactive storytelling and immersive learning.
+          </p>
+          
+        
+        </div>
+      </section>
 
         {/* Historical Periods */}
         <section className="py-16 bg-white">

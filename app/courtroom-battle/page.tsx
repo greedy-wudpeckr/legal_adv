@@ -109,82 +109,82 @@ export default function CourtroomBattle() {
   };
 
   return (
-    <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
-        {/* Main Content */}
-        <div className="max-w-6xl mx-auto px-6 py-12">
-          <div className="text-center mb-12">
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <Gavel className="w-12 h-12 text-amber-600" />
-              <h1 className="text-4xl font-bold text-gray-800">Courtroom Battle</h1>
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
+
+      {/* Main Content */}
+      <div className="max-w-6xl mx-auto px-6 py-12">
+        <div className="text-center mb-12">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <Gavel className="w-12 h-12 text-amber-600" />
+            <h1 className="text-4xl font-bold text-gray-800">Courtroom Battle</h1>
+          </div>
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-6">
+            Master legal advocacy through realistic courtroom simulations with increasing difficulty
+          </p>
+          
+          {/* Action Buttons */}
+          <div className="flex items-center justify-center gap-4 mb-6">
+            <Button 
+              onClick={() => setShowStatsModal(true)}
+              variant="outline"
+              className="border-amber-300 text-amber-700 hover:bg-amber-50"
+            >
+              <Trophy className="w-4 h-4 mr-2" />
+              Profile
+            </Button>
+            <Button 
+              onClick={() => setShowSettings(true)}
+              variant="outline"
+              className="border-amber-300 text-amber-700 hover:bg-amber-50"
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              Settings
+            </Button>
+            <Button 
+              onClick={() => setShowHelp(true)}
+              variant="outline"
+              className="border-amber-300 text-amber-700 hover:bg-amber-50"
+            >
+              <HelpCircle className="w-4 h-4 mr-2" />
+              Help
+            </Button>
+          </div>
+          
+          {/* Player Progress Summary */}
+          {playerStats && (
+            <QuickFactsCard
+              title="Your Progress"
+              facts={[
+                { label: 'Current Level', value: `Level ${playerStats.level}`, icon: Trophy },
+                { label: 'Cases Won', value: playerStats.casesWon.toString(), icon: Star },
+                { label: 'Win Streak', value: playerStats.currentWinStreak.toString(), icon: TrendingUp },
+                { label: 'Accuracy', value: `${Math.round((playerStats.perfectChoices / Math.max(playerStats.totalChoices, 1)) * 100)}%`, icon: Target }
+              ]}
+              theme="amber"
+              className="max-w-md mx-auto mb-6"
+            />
+          )}
+          
+          {/* Case Statistics */}
+          <div className="grid md:grid-cols-4 gap-4 max-w-2xl mx-auto">
+            <div className="bg-white rounded-lg p-4 border border-amber-200 shadow-sm hover:shadow-md transition-shadow">
+              <div className="text-2xl font-bold text-amber-600">{stats.total}</div>
+              <div className="text-sm text-gray-600">Total Cases</div>
             </div>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-6">
-              Master legal advocacy through realistic courtroom simulations with increasing difficulty
-            </p>
-            
-            {/* Action Buttons */}
-            <div className="flex items-center justify-center gap-4 mb-6">
-              <Button 
-                onClick={() => setShowStatsModal(true)}
-                variant="outline"
-                className="border-amber-300 text-amber-700 hover:bg-amber-50"
-              >
-                <Trophy className="w-4 h-4 mr-2" />
-                Profile
-              </Button>
-              <Button 
-                onClick={() => setShowSettings(true)}
-                variant="outline"
-                className="border-amber-300 text-amber-700 hover:bg-amber-50"
-              >
-                <Settings className="w-4 h-4 mr-2" />
-                Settings
-              </Button>
-              <Button 
-                onClick={() => setShowHelp(true)}
-                variant="outline"
-                className="border-amber-300 text-amber-700 hover:bg-amber-50"
-              >
-                <HelpCircle className="w-4 h-4 mr-2" />
-                Help
-              </Button>
+            <div className="bg-white rounded-lg p-4 border border-green-200 shadow-sm hover:shadow-md transition-shadow">
+              <div className="text-2xl font-bold text-green-600">{stats.byDifficulty.beginner}</div>
+              <div className="text-sm text-gray-600">Beginner</div>
             </div>
-            
-            {/* Player Progress Summary */}
-            {playerStats && (
-              <QuickFactsCard
-                title="Your Progress"
-                facts={[
-                  { label: 'Current Level', value: `Level ${playerStats.level}`, icon: Trophy },
-                  { label: 'Cases Won', value: playerStats.casesWon.toString(), icon: Star },
-                  { label: 'Win Streak', value: playerStats.currentWinStreak.toString(), icon: TrendingUp },
-                  { label: 'Accuracy', value: `${Math.round((playerStats.perfectChoices / Math.max(playerStats.totalChoices, 1)) * 100)}%`, icon: Target }
-                ]}
-                theme="amber"
-                className="max-w-md mx-auto mb-6"
-              />
-            )}
-            
-            {/* Case Statistics */}
-            <div className="grid md:grid-cols-4 gap-4 max-w-2xl mx-auto">
-              <div className="bg-white rounded-lg p-4 border border-amber-200 shadow-sm hover:shadow-md transition-shadow">
-                <div className="text-2xl font-bold text-amber-600">{stats.total}</div>
-                <div className="text-sm text-gray-600">Total Cases</div>
-              </div>
-              <div className="bg-white rounded-lg p-4 border border-green-200 shadow-sm hover:shadow-md transition-shadow">
-                <div className="text-2xl font-bold text-green-600">{stats.byDifficulty.beginner}</div>
-                <div className="text-sm text-gray-600">Beginner</div>
-              </div>
-              <div className="bg-white rounded-lg p-4 border border-yellow-200 shadow-sm hover:shadow-md transition-shadow">
-                <div className="text-2xl font-bold text-yellow-600">{stats.byDifficulty.intermediate}</div>
-                <div className="text-sm text-gray-600">Intermediate</div>
-              </div>
-              <div className="bg-white rounded-lg p-4 border border-red-200 shadow-sm hover:shadow-md transition-shadow">
-                <div className="text-2xl font-bold text-red-600">{stats.byDifficulty.advanced}</div>
-                <div className="text-sm text-gray-600">Advanced</div>
-              </div>
+            <div className="bg-white rounded-lg p-4 border border-yellow-200 shadow-sm hover:shadow-md transition-shadow">
+              <div className="text-2xl font-bold text-yellow-600">{stats.byDifficulty.intermediate}</div>
+              <div className="text-sm text-gray-600">Intermediate</div>
+            </div>
+            <div className="bg-white rounded-lg p-4 border border-red-200 shadow-sm hover:shadow-md transition-shadow">
+              <div className="text-2xl font-bold text-red-600">{stats.byDifficulty.advanced}</div>
+              <div className="text-sm text-gray-600">Advanced</div>
             </div>
           </div>
+        </div>
 
           {/* Difficulty Filter */}
           <div className="bg-white rounded-xl shadow-lg p-8 mb-8 border border-amber-200">
