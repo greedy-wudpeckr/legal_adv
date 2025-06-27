@@ -200,128 +200,128 @@ export default function HistoricalChatInterface({ figure, onSpeakingChange }: Hi
     "What do you think about today's world?"
   ];
 
-  return (
-    <div className="flex flex-col h-full bg-white">
-      {/* Audio Controls */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={toggleAudio}
-            className="border-gray-300 hover:bg-gray-50"
-          >
-            {audioEnabled ? (
-              <Volume2 className="w-4 h-4 text-black" />
-            ) : (
-              <VolumeX className="w-4 h-4 text-gray-500" />
-            )}
-            <span className="ml-2 text-sm">
-              {audioEnabled ? 'Audio On' : 'Audio Off'}
-            </span>
-          </Button>
-        </div>
-        
+return (
+  <div className="flex flex-col h-full bg-white">
+    {/* Audio Controls - Fixed Height */}
+    <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white flex-shrink-0">
+      <div className="flex items-center gap-2">
         <Button
           variant="outline"
           size="sm"
-          onClick={resetConversation}
-          className="border-gray-300 hover:bg-gray-50 text-black"
+          onClick={toggleAudio}
+          className="border-gray-300 hover:bg-gray-50"
         >
-          Reset Chat
+          {audioEnabled ? (
+            <Volume2 className="w-4 h-4 text-black" />
+          ) : (
+            <VolumeX className="w-4 h-4 text-gray-500" />
+          )}
+          <span className="ml-2 text-sm">
+            {audioEnabled ? 'Audio On' : 'Audio Off'}
+          </span>
         </Button>
       </div>
-
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-white">
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            <div
-              className={`max-w-xs lg:max-w-md px-4 py-3 rounded-lg transition-all duration-200 ${
-                message.sender === 'user'
-                  ? 'bg-black text-white shadow-sm'
-                  : 'bg-white border border-gray-200 text-black shadow-sm hover:shadow-md'
-              }`}
-            >
-              <p className="text-sm leading-relaxed">{message.text}</p>
-              <div className={`text-xs mt-2 ${
-                message.sender === 'user' ? 'text-gray-300' : 'text-gray-500'
-              }`}>
-                {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </div>
-            </div>
-          </div>
-        ))}
-        
-        {/* Typing Indicator */}
-        {isTyping && (
-          <div className="flex justify-start">
-            <div className="bg-white border border-gray-200 text-black shadow-sm px-4 py-3 rounded-lg">
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-              </div>
-            </div>
-          </div>
-        )}
-        
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input Area */}
-      <div className="border-t border-gray-200 p-6 bg-white">
-        <div className="flex gap-3 mb-4">
-          <Input
-            ref={inputRef}
-            type="text"
-            placeholder={`Ask ${figure.name} about their life and times...`}
-            value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
-            disabled={isLoading}
-            className="flex-1 border-gray-300 focus:border-black focus:ring-black bg-white text-black placeholder-gray-500"
-          />
-          <Button
-            onClick={handleSendMessage}
-            disabled={!inputMessage.trim() || isLoading}
-            className="bg-black hover:bg-gray-800 text-white px-6 transition-colors"
-          >
-            {isLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Send className="w-4 h-4" />
-            )}
-          </Button>
-        </div>
-        
-        {/* Suggested Questions */}
-        <div>
-          <p className="text-xs text-gray-500 mb-2">Suggested questions:</p>
-          <div className="flex flex-wrap gap-2">
-            {suggestedQuestions.map((suggestion, index) => (
-              <button
-                key={index}
-                onClick={() => setInputMessage(suggestion)}
-                className="text-xs px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full transition-colors border border-gray-200"
-                disabled={isLoading}
-              >
-                {suggestion}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Caption System */}
-      <HistoricalCaption
-        text={currentResponse}
-        isVisible={showCaption}
-        onComplete={() => setShowCaption(false)}
-      />
+      
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={resetConversation}
+        className="border-gray-300 hover:bg-gray-50 text-black"
+      >
+        Reset Chat
+      </Button>
     </div>
-  );
+
+    {/* Messages Area - Fixed Height with Scroll */}
+    <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-white min-h-0">
+      {messages.map((message) => (
+        <div
+          key={message.id}
+          className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+        >
+          <div
+            className={`max-w-xs lg:max-w-md px-4 py-3 rounded-lg transition-all duration-200 ${
+              message.sender === 'user'
+                ? 'bg-black text-white shadow-sm'
+                : 'bg-white border border-gray-200 text-black shadow-sm hover:shadow-md'
+            }`}
+          >
+            <p className="text-sm leading-relaxed">{message.text}</p>
+            <div className={`text-xs mt-2 ${
+              message.sender === 'user' ? 'text-gray-300' : 'text-gray-500'
+            }`}>
+              {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </div>
+          </div>
+        </div>
+      ))}
+      
+      {/* Typing Indicator */}
+      {isTyping && (
+        <div className="flex justify-start">
+          <div className="bg-white border border-gray-200 text-black shadow-sm px-4 py-3 rounded-lg">
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      <div ref={messagesEndRef} />
+    </div>
+
+    {/* Input Area - Fixed Height */}
+    <div className="border-t border-gray-200 p-6 bg-white flex-shrink-0">
+      <div className="flex gap-3 mb-4">
+        <Input
+          ref={inputRef}
+          type="text"
+          placeholder={`Ask ${figure.name} about their life and times...`}
+          value={inputMessage}
+          onChange={(e) => setInputMessage(e.target.value)}
+          onKeyPress={handleKeyPress}
+          disabled={isLoading}
+          className="flex-1 border-gray-300 focus:border-black focus:ring-black bg-white text-black placeholder-gray-500"
+        />
+        <Button
+          onClick={handleSendMessage}
+          disabled={!inputMessage.trim() || isLoading}
+          className="bg-black hover:bg-gray-800 text-white px-6 transition-colors"
+        >
+          {isLoading ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Send className="w-4 h-4" />
+          )}
+        </Button>
+      </div>
+      
+      {/* Suggested Questions */}
+      <div>
+        <p className="text-xs text-gray-500 mb-2">Suggested questions:</p>
+        <div className="flex flex-wrap gap-2">
+          {suggestedQuestions.map((suggestion, index) => (
+            <button
+              key={index}
+              onClick={() => setInputMessage(suggestion)}
+              className="text-xs px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full transition-colors border border-gray-200"
+              disabled={isLoading}
+            >
+              {suggestion}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+
+    {/* Caption System */}
+    <HistoricalCaption
+      text={currentResponse}
+      isVisible={showCaption}
+      onComplete={() => setShowCaption(false)}
+    />
+  </div>
+);
 }

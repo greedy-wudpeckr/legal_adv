@@ -71,7 +71,7 @@ export default function ChatWithFigurePage() {
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+<div className="h-screen bg-white flex flex-col overflow-hidden"> {/* Added overflow-hidden */}
       {/* Header */}
       <div className="bg-white shadow-sm border-b border-gray-200 flex-shrink-0">
         <div className="max-w-7xl mx-auto px-6 py-4">
@@ -96,12 +96,15 @@ export default function ChatWithFigurePage() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex">
+      <div className="flex-1 flex min-h-0"> {/* Added min-h-0 to prevent flex item growth */}
         {/* 3D Avatar Section */}
         <div className="w-1/3 bg-gradient-to-br from-white to-gray-50 border-r border-gray-200 flex flex-col">
-          {/* Avatar Display */}
-          <div className="flex-1 relative bg-white">
-            <Canvas camera={{ position: [0, 1.5, 3] }}>
+          {/* Avatar Display - Fixed Height */}
+          <div className="h-[400px] relative bg-white flex-shrink-0">
+            <Canvas 
+              camera={{ position: [0, 1.5, 3] }}
+              style={{ width: '100%', height: '100%' }}
+            >
               <ambientLight intensity={1.5} />
               <directionalLight position={[2, 2, 5]} intensity={0.8} />
               <pointLight position={[-2, 2, 2]} intensity={0.5} />
@@ -116,38 +119,40 @@ export default function ChatWithFigurePage() {
               </div>
             )}
           </div>
-
-          {/* Figure Info Panel */}
-          <div className="p-6 bg-white border-t border-gray-200">
-            <h3 className="font-bold text-black mb-2">{figure.name}</h3>
-            <p className="text-sm text-gray-600 mb-3 leading-relaxed">{figure.significance}</p>
-            
-            {/* Quick Facts */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-xs text-gray-500">
-                <Calendar className="w-3 h-3" />
-                <span>{figure.timeRange}</span>
+        
+          {/* Figure Info Panel - Scrollable if needed */}
+          <div className="flex-1 overflow-y-auto min-h-0"> {/* Added min-h-0 */}
+            <div className="p-6 bg-white border-t border-gray-200">
+              <h3 className="font-bold text-black mb-2">{figure.name}</h3>
+              <p className="text-sm text-gray-600 mb-3 leading-relaxed">{figure.significance}</p>
+              
+              {/* Quick Facts */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-xs text-gray-500">
+                  <Calendar className="w-3 h-3" />
+                  <span>{figure.timeRange}</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-gray-500">
+                  <BookOpen className="w-3 h-3" />
+                  <span>{figure.achievements.length} major achievements</span>
+                </div>
               </div>
-              <div className="flex items-center gap-2 text-xs text-gray-500">
-                <BookOpen className="w-3 h-3" />
-                <span>{figure.achievements.length} major achievements</span>
+        
+              {/* Key Achievement Preview */}
+              <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <h4 className="text-xs font-semibold text-black mb-1 uppercase tracking-wide">
+                  Notable Achievement
+                </h4>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  {figure.achievements[0]}
+                </p>
               </div>
-            </div>
-
-            {/* Key Achievement Preview */}
-            <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-              <h4 className="text-xs font-semibold text-black mb-1 uppercase tracking-wide">
-                Notable Achievement
-              </h4>
-              <p className="text-xs text-gray-600 leading-relaxed">
-                {figure.achievements[0]}
-              </p>
             </div>
           </div>
         </div>
 
         {/* Chat Section */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-h-0"> {/* Added min-h-0 */}
           <HistoricalChatInterface 
             figure={figure} 
             onSpeakingChange={setIsSpeaking}
