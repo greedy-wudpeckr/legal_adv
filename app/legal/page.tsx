@@ -1,10 +1,9 @@
 "use client"
 
 import { useState } from 'react';
-
 import CaseQueryForm from '@/components/case-query-form';
 import GandhiModel from '@/components/courtroom-scene';
-import Navigation from '@/components/navigation';
+import SharedNavigation from '@/components/shared-navigation';
 import { Toaster } from '@/components/ui/toaster';
 import { Canvas } from '@react-three/fiber';
 
@@ -13,7 +12,12 @@ export default function LegalHome() {
 
   return (
     <div className="relative bg-cover bg-center w-full h-screen" style={{ backgroundImage: "url('/courtroom-bg.png')" }}>
-      <Navigation />
+      <SharedNavigation 
+        platform="apnawaqeel"
+        breadcrumbs={[
+          { label: 'Legal Education', href: '/legal' }
+        ]}
+      />
 
       <Canvas camera={{ position: [0, 1.5, 3] }}>
         <ambientLight intensity={2} />
