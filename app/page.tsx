@@ -5,7 +5,6 @@ import { Stats } from '@/components/home/Stats';
 import { Navbar } from '@/components/ui/resizable-navbar';
 import { SmoothCursor } from '@/components/ui/smooth-cursor';
 import { FeaturesGrid } from '@/components/home/Features';
-import "./page.css"
 
 export default function Home() {
     return (
