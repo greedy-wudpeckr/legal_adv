@@ -22,6 +22,7 @@ import SharedNavigation from '@/components/shared-navigation';
 import QuickFactsCard from '@/components/ui/quick-facts-card';
 import SettingsPanel from '@/components/ui/settings-panel';
 import HelpOverlay from '@/components/ui/help-overlay';
+import TimelinePage from '@/components/ui/Timeline';
 
 const navigationCards = [
   {
@@ -42,24 +43,24 @@ const navigationCards = [
     color: 'text-gray-700',
     count: '3000+ years'
   },
-  {
-    id: 'ask-history',
-    title: 'Ask History',
-    description: 'Get answers to your historical questions from AI',
-    icon: MessageSquare,
-    href: '/apni-history/ask',
-    color: 'text-gray-700',
-    count: 'AI Powered'
-  },
-  {
-    id: 'documents',
-    title: 'Historical Documents',
-    description: 'Explore primary sources and ancient texts',
-    icon: FileText,
-    href: '/apni-history/documents',
-    color: 'text-gray-700',
-    count: 'Primary Sources'
-  }
+  // {
+  //   id: 'ask-history',
+  //   title: 'Ask History',
+  //   description: 'Get answers to your historical questions from AI',
+  //   icon: MessageSquare,
+  //   href: '/apni-history/ask',
+  //   color: 'text-gray-700',
+  //   count: 'AI Powered'
+  // },
+  // {
+  //   id: 'documents',
+  //   title: 'Historical Documents',
+  //   description: 'Explore primary sources and ancient texts',
+  //   icon: FileText,
+  //   href: '/apni-history/documents',
+  //   color: 'text-gray-700',
+  //   count: 'Primary Sources'
+  // }
 ];
 
 const helpSections = [
@@ -130,38 +131,7 @@ export default function ApniHistoryPage() {
             interactive storytelling and immersive learning.
           </p>
           
-          {/* Action Buttons */}
-          <div className="flex items-center justify-center gap-4 mb-8">
-            <Button 
-              onClick={() => setShowSettings(true)}
-              variant="outline"
-              className="border-gray-300 text-gray-700 hover:bg-gray-50"
-            >
-              <Settings className="w-4 h-4 mr-2" />
-              Settings
-            </Button>
-            <Button 
-              onClick={() => setShowHelp(true)}
-              variant="outline"
-              className="border-gray-300 text-gray-700 hover:bg-gray-50"
-            >
-              <HelpCircle className="w-4 h-4 mr-2" />
-              Help
-            </Button>
-          </div>
-          
-          {/* Quick Facts */}
-          <QuickFactsCard
-            title="Historical Scope"
-            facts={[
-              { label: 'Time Span', value: '5000+ Years', icon: Calendar },
-              { label: 'Historical Figures', value: historicalFigures.length.toString(), icon: Crown },
-              { label: 'Major Periods', value: historicalPeriods.length.toString(), icon: BookOpen },
-              { label: 'Interactive Features', value: 'AI Powered', icon: Sparkles }
-            ]}
-            theme="monochrome"
-            className="max-w-md mx-auto"
-          />
+        
         </div>
       </section>
 
@@ -223,64 +193,8 @@ export default function ApniHistoryPage() {
         </div>
       </section>
 
-      {/* Navigation Cards */}
-      <section className="py-16 bg-gradient-to-br from-gray-50 to-white">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-black mb-4">
-              Explore History
-            </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Choose your path through the corridors of time
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {navigationCards.map((card) => {
-              const Icon = card.icon;
-              const isHovered = hoveredCard === card.id;
-              
-              return (
-                <Link key={card.id} href={card.href}>
-                  <div
-                    className={`group cursor-pointer transition-all duration-300 ${
-                      isHovered ? 'scale-105' : 'hover:scale-102'
-                    }`}
-                    onMouseEnter={() => setHoveredCard(card.id)}
-                    onMouseLeave={() => setHoveredCard(null)}
-                  >
-                    <div className="bg-white border border-gray-200 rounded-lg p-6 h-full hover:shadow-lg transition-all">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="p-3 bg-gray-100 rounded-lg">
-                          <Icon className="w-6 h-6 text-black" />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-bold text-black">{card.title}</h3>
-                          <div className="text-xs text-gray-500">{card.count}</div>
-                        </div>
-                      </div>
-                      
-                      <p className="text-gray-600 text-sm mb-4 leading-relaxed">
-                        {card.description}
-                      </p>
-                      
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-500">Explore now</span>
-                        <ChevronRight className={`w-4 h-4 text-gray-400 transition-transform ${
-                          isHovered ? 'translate-x-1' : ''
-                        }`} />
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
       {/* Featured Figures Preview */}
-      <section className="py-16 bg-white">
+      <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-black mb-4">
@@ -315,6 +229,8 @@ export default function ApniHistoryPage() {
         </div>
       </section>
 
+      <TimelinePage/>
+
       {/* Call to Action */}
       <section className="py-16 bg-gradient-to-r from-black to-gray-800 text-white">
         <div className="max-w-4xl mx-auto px-6 text-center">
@@ -326,48 +242,9 @@ export default function ApniHistoryPage() {
             Dive deep into the fascinating world of Indian history and discover 
             the stories that shaped our civilization.
           </p>
-          
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/apni-history/explore">
-              <Button 
-                size="lg"
-                className="bg-white text-black hover:bg-gray-100 px-8 py-3 font-semibold"
-              >
-                Start Exploring
-              </Button>
-            </Link>
-            <Link href="/legal">
-              <Button 
-                variant="outline" 
-                size="lg"
-                className="border-white text-white hover:bg-white hover:text-black px-8 py-3 font-semibold"
-              >
-                Try apnaWaqeel
-              </Button>
-            </Link>
-          </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <BookOpen className="w-6 h-6 text-gray-400" />
-            <h3 className="text-2xl font-bold">apniHistory</h3>
-          </div>
-          <p className="text-gray-400 mb-6">
-            Bringing history to life through interactive learning experiences.
-          </p>
-          <div className="flex justify-center gap-6 text-sm text-gray-400">
-            <span>© 2024 EduVerse. All rights reserved.</span>
-            <span>•</span>
-            <span>Privacy Policy</span>
-            <span>•</span>
-            <span>Terms of Service</span>
-          </div>
-        </div>
-      </footer>
 
       {/* Modals */}
       <SettingsPanel 

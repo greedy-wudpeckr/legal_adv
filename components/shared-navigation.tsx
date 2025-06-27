@@ -76,22 +76,6 @@ export default function SharedNavigation({ platform, breadcrumbs = [] }: SharedN
             
             {platform === 'apnihistory' && (
               <>
-                <Link
-                  href="/apni-history/explore"
-                  className={`text-black hover:text-gray-700 hover:underline decoration-gray-300 transition-colors ${
-                    pathname.includes('/explore') ? 'underline decoration-gray-300' : ''
-                  }`}
-                >
-                  Explore Figures
-                </Link>
-                <Link
-                  href="/apni-history/timeline"
-                  className={`text-black hover:text-gray-700 hover:underline decoration-gray-300 transition-colors ${
-                    pathname.includes('/timeline') ? 'underline decoration-gray-300' : ''
-                  }`}
-                >
-                  Timeline
-                </Link>
               </>
             )}
           </div>
