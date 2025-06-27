@@ -21,7 +21,7 @@ export function SharedNavbar({ className }: { className?: string }) {
             height={32}
             className="rounded"
           />
-          <span className="font-bold text-lg text-black hover:text-gray-700 transition-colors">
+          <span className="font-bold text-lg text-black dark:text-white">
             EduVerse
           </span>
         </Link>
