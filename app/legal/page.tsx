@@ -11,7 +11,7 @@ export default function LegalHome() {
   const [speaking, setSpeaking] = useState(false);
 
   return (
-    <div className="relative bg-cover bg-center w-full h-screen" style={{ backgroundImage: "url('/courtroom-bg.png')" }}>
+    <div className="relative overflow-hidden bg-cover bg-center w-full h-screen" style={{ backgroundImage: "url('/courtroom-bg.png')" }}>
       <SharedNavigation 
         platform="apnawaqeel"
         breadcrumbs={[

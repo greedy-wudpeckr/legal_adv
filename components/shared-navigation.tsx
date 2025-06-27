@@ -48,7 +48,7 @@ export default function SharedNavigation({ platform, breadcrumbs = [] }: SharedN
             <span className="font-medium group-hover:underline decoration-gray-300">EduVerse</span>
           </Link>
 
-          {/* Center: Platform Info */}
+          
           {platformConfig && (
             <div className="flex items-center gap-3">
               <platformConfig.icon className={`w-8 h-8 ${platformConfig.color}`} />
@@ -97,28 +97,6 @@ export default function SharedNavigation({ platform, breadcrumbs = [] }: SharedN
           </div>
         </div>
 
-        {/* Breadcrumbs */}
-        {breadcrumbs.length > 0 && (
-          <div className="pb-3">
-            <nav className="flex items-center space-x-2 text-sm">
-              {breadcrumbs.map((crumb, index) => (
-                <div key={index} className="flex items-center">
-                  {index > 0 && <ChevronRight className="w-4 h-4 text-gray-400 mx-2" />}
-                  {crumb.href ? (
-                    <Link 
-                      href={crumb.href} 
-                      className="text-gray-500 hover:text-gray-700 hover:underline decoration-gray-300 transition-colors"
-                    >
-                      {crumb.label}
-                    </Link>
-                  ) : (
-                    <span className="text-gray-700 font-medium">{crumb.label}</span>
-                  )}
-                </div>
-              ))}
-            </nav>
-          </div>
-        )}
       </div>
     </nav>
   );

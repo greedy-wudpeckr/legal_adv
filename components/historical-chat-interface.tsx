@@ -195,7 +195,6 @@ export default function HistoricalChatInterface({ figure, onSpeakingChange }: Hi
     "What was your greatest achievement?",
     "Tell me about your daily life",
     "What challenges did you face?",
-    "What advice would you give to modern leaders?",
     "How did you handle difficult decisions?",
     "What do you think about today's world?"
   ];
