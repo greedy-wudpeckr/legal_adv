@@ -10,7 +10,7 @@ export function Navbar({ className }: { className?: string }) {
   const [active, setActive] = useState<string | null>(null);
   return (
     <div
-      className={cn("fixed top-4 inset-x-0  max-w-2xl mx-auto z-[9999]", className)}
+      className={cn("sticky top-0 inset-x-0 z-[9999]", className)}
     >
       <Menu setActive={setActive}>
         <MenuItem setActive={setActive} active={active} item="Law">
@@ -22,18 +22,18 @@ export function Navbar({ className }: { className?: string }) {
           </div>
         </MenuItem>
         <MenuItem setActive={setActive} active={active} item="History">
-        <div className="flex flex-col space-y-4 text-sm">
+          <div className="flex flex-col space-y-4 text-sm">
             <HoveredLink href="/apni-history">ApniHistory</HoveredLink>
-             <HoveredLink href="/apni-history/explore">Explore Historical Figures</HoveredLink>
-  </div>
+            <HoveredLink href="/apni-history/explore">Explore Historical Figures</HoveredLink>
+          </div>
         </MenuItem>
-<MenuItem setActive={setActive} active={active} item="Get Started">
-<div className="flex flex-col space-y-4 text-sm">
+        <MenuItem setActive={setActive} active={active} item="Get Started">
+          <div className="flex flex-col space-y-4 text-sm">
             <HoveredLink href="/login">Log In</HoveredLink>
-             <HoveredLink href="/signup">Sign Up</HoveredLink>
-              <HoveredLink href="/contact">Contact Us</HoveredLink>
-  </div>
-</MenuItem>
+            <HoveredLink href="/signup">Sign Up</HoveredLink>
+            <HoveredLink href="/contact">Contact Us</HoveredLink>
+          </div>
+        </MenuItem>
 
       </Menu>
     </div>

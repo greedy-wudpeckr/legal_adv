@@ -66,7 +66,8 @@ export const historicalFigures: HistoricalFigure[] = [
     name: 'Emperor Ashoka',
     period: 'ancient-india',
     timeRange: '304 - 232 BCE',
-    biography: 'Ashoka the Great was an Indian emperor of the Maurya Dynasty who ruled almost all of the Indian subcontinent. After witnessing the devastation of the Kalinga War, he embraced Buddhism and became known for his policy of non-violence and moral governance.',
+    biography:
+      'Ashoka the Great was an Indian emperor of the Maurya Dynasty who ruled almost all of the Indian subcontinent. After witnessing the devastation of the Kalinga War, he embraced Buddhism and became known for his policy of non-violence and moral governance.',
     achievements: [
       'Unified most of the Indian subcontinent under one rule',
       'Promoted Buddhism and built thousands of stupas',
@@ -74,7 +75,8 @@ export const historicalFigures: HistoricalFigure[] = [
       'Created the first known animal welfare laws',
       'Spread Buddhism to Sri Lanka, Central Asia, and Southeast Asia'
     ],
-    significance: 'Transformed from a ruthless conqueror to a benevolent ruler, establishing principles of governance based on dharma (righteousness) that influenced Indian political thought for centuries.',
+    significance:
+      'Transformed from a ruthless conqueror to a benevolent ruler, establishing principles of governance based on dharma (righteousness) that influenced Indian political thought for centuries.',
     quotes: [
       'All men are my children. What I desire for my own children, and I desire their welfare and happiness both in this world and the next, that I desire for all men.',
       'There is no better work than promoting the welfare of all the people and whatever efforts I am making is to repay the debt I owe to all people.'
@@ -84,55 +86,37 @@ export const historicalFigures: HistoricalFigure[] = [
     imageUrl: '/images/ashoka.jpg'
   },
   {
-    id: 'akbar',
-    name: 'Emperor Akbar',
-    period: 'medieval-india',
-    timeRange: '1542 - 1605',
-    biography: 'Akbar the Great was the third Mughal emperor who ruled from 1556 to 1605. Known for his military prowess, administrative genius, and religious tolerance, he created a syncretic religion called Din-i Ilahi and promoted cultural synthesis.',
-    achievements: [
-      'Expanded Mughal Empire to cover most of the Indian subcontinent',
-      'Established efficient administrative system with mansabdari',
-      'Promoted religious tolerance and interfaith dialogue',
-      'Patronized arts, literature, and architecture',
-      'Created the Ibadat Khana (House of Worship) for religious discussions'
-    ],
-    significance: 'Established the foundation of Mughal administrative and cultural policies that lasted for centuries, promoting a unique Indo-Islamic synthesis that defined medieval Indian civilization.',
-    quotes: [
-      'A monarch should be ever intent on conquest, otherwise his neighbours rise in arms against him.',
-      'The pursuit of reason and rejection of traditionalism are so brilliantly patent as to be above the need of argument.'
-    ],
-    avatarModel: 'akbar_3d_model.glb',
-    voiceId: 'akbar_voice_id',
-    imageUrl: '/images/akbar.jpg'
-  },
-  {
-    id: 'rani-lakshmibai',
-    name: 'Rani Lakshmibai',
+    id: 'gandhi',
+    name: 'Mahatma Gandhi',
     period: 'modern-india',
-    timeRange: '1828 - 1858',
-    biography: 'Rani Lakshmibai was the queen of the Maratha-ruled princely state of Jhansi. She became a symbol of resistance to British rule in India and is remembered as one of the leading figures of the Indian Rebellion of 1857.',
+    timeRange: '1869 - 1948',
+    biography:
+      'Mohandas Karamchand Gandhi, known as Mahatma Gandhi, was the leader of India\'s nonviolent independence movement against British rule. He pioneered the philosophy of satyagraha—nonviolent resistance to tyranny.',
     achievements: [
-      'Led the defense of Jhansi against British forces',
-      'Became a symbol of women\'s empowerment and courage',
-      'Inspired countless freedom fighters in the independence movement',
-      'Demonstrated exceptional military leadership and strategy',
-      'Fought till her last breath for the independence of her motherland'
+      'Led India\'s struggle for independence through nonviolent means',
+      'Organized the Salt March and Quit India Movement',
+      'Inspired civil rights movements worldwide',
+      'Promoted principles of truth, nonviolence, and self-reliance',
+      'Influenced the drafting of the Indian Constitution'
     ],
-    significance: 'Embodied the spirit of resistance against colonial rule and became an enduring symbol of courage, patriotism, and women\'s strength in Indian history.',
+    significance:
+      'Symbolized peace, civil disobedience, and moral leadership, and became an enduring global icon for nonviolent resistance.',
     quotes: [
-      'Main apni Jhansi nahi doongi! (I will not give up my Jhansi!)',
-      'Better to die fighting than to live as a slave.'
+      'Be the change you wish to see in the world.',
+      'The best way to find yourself is to lose yourself in the service of others.',
+      'An eye for an eye will make the whole world blind.'
     ],
-    avatarModel: 'lakshmibai_3d_model.glb',
-    voiceId: 'lakshmibai_voice_id',
-    imageUrl: '/images/rani-lakshmibai.jpg'
+    avatarModel: 'gandhi_3d_model.glb',
+    voiceId: 'gandhi_voice_id',
+    imageUrl: '/images/gandhi.jpg'
   },
   {
-    id: 'subhas-chandra-bose',
+    id: 'subash',
     name: 'Subhas Chandra Bose',
     period: 'modern-india',
     timeRange: '1897 - 1945',
-    biography: 'Subhas Chandra Bose was an Indian nationalist whose defiance of British authority made him a hero among Indians. He formed the Indian National Army (Azad Hind Fauj) and sought international support for Indian independence.',
+    biography:
+      'Subhas Chandra Bose was an Indian nationalist whose defiance of British authority made him a hero among Indians. He formed the Indian National Army (Azad Hind Fauj) and sought international support for Indian independence.',
     achievements: [
       'Founded the Indian National Army (INA)',
       'Established the Provisional Government of Free India',
@@ -140,7 +124,8 @@ export const historicalFigures: HistoricalFigure[] = [
       'Inspired millions with his slogan "Give me blood, and I will give you freedom"',
       'Challenged British authority through armed resistance'
     ],
-    significance: 'Represented the revolutionary approach to Indian independence and demonstrated that armed resistance could be an effective tool against colonial rule, inspiring future generations of freedom fighters.',
+    significance:
+      'Represented the revolutionary approach to Indian independence and demonstrated that armed resistance could be an effective tool against colonial rule, inspiring future generations of freedom fighters.',
     quotes: [
       'Give me blood, and I will give you freedom!',
       'It is our duty to pay for our liberty with our own blood.',
@@ -149,6 +134,31 @@ export const historicalFigures: HistoricalFigure[] = [
     avatarModel: 'bose_3d_model.glb',
     voiceId: 'bose_voice_id',
     imageUrl: '/images/subhas-bose.jpg'
+  },
+  {
+    id: 'vallabh',
+    name: 'Sardar Vallabhbhai Patel',
+    period: 'modern-india',
+    timeRange: '1875 - 1950',
+    biography:
+      'Sardar Vallabhbhai Patel, known as the Iron Man of India, was instrumental in the political integration of India. As the first Deputy Prime Minister and Home Minister, he unified over 500 princely states into the Indian Union.',
+    achievements: [
+      'Unified India by integrating princely states post-independence',
+      'Played a crucial role in the Quit India Movement',
+      'Was a senior leader in the Indian National Congress',
+      'Oversaw India\'s transition to independence and democratic governance',
+      'Advocated strong central authority for national unity'
+    ],
+    significance:
+      'Played a foundational role in shaping post-independence India, ensuring its unity and stability through statesmanship, negotiation, and determination.',
+    quotes: [
+      'Manpower without unity is not a strength unless it is harmonized and united properly, then it becomes a spiritual power.',
+      'Every citizen of India must remember that he is an Indian and he has every right in this country but with certain duties.',
+      'Take to the path of dharma – the path of truth and justice. Don’t misuse your freedom.'
+    ],
+    avatarModel: 'patel_3d_model.glb',
+    voiceId: 'patel_voice_id',
+    imageUrl: '/images/vallabhbhai-patel.jpg'
   }
 ];
 

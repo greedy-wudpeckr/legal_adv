@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { 
-  ArrowLeft, 
+import {
+  ArrowLeft,
   Crown,
   Calendar,
   BookOpen,
@@ -17,11 +17,12 @@ import { HistoricalFigure } from '@/types/history';
 import HistoricalAvatar from '@/components/historical-avatar';
 import HistoricalChatInterface from '@/components/historical-chat-interface';
 import { HistoricalErrorMessage } from '@/components/historical-loading-states';
+import { OrbitControls } from '@react-three/drei';
 
 export default function ChatWithFigurePage() {
   const params = useParams();
   const figureId = params.figureId as string;
-  
+
   const [figure, setFigure] = useState<HistoricalFigure | null>(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -40,10 +41,10 @@ export default function ChatWithFigurePage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="flex justify-center items-center bg-white min-h-screen">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-gray-400 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-black mb-4">Loading Historical Figure...</h1>
+          <Loader2 className="mx-auto mb-4 w-8 h-8 text-gray-400 animate-spin" />
+          <h1 className="mb-4 font-bold text-black text-2xl">Loading Historical Figure...</h1>
           <p className="text-gray-600">Preparing your conversation...</p>
         </div>
       </div>
@@ -52,8 +53,8 @@ export default function ChatWithFigurePage() {
 
   if (error || !figure) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-6">
-        <div className="max-w-md w-full">
+      <div className="flex justify-center items-center bg-white p-6 min-h-screen">
+        <div className="w-full max-w-md">
           <HistoricalErrorMessage
             message={error || 'Historical figure not found'}
             onRetry={() => window.location.reload()}
@@ -71,68 +72,91 @@ export default function ChatWithFigurePage() {
   }
 
   return (
-<div className="h-screen bg-white flex flex-col overflow-hidden"> {/* Added overflow-hidden */}
+    <div className="flex flex-col bg-white h-screen overflow-hidden"> {/* Added overflow-hidden */}
 
       {/* Main Content */}
-      <div className="flex-1 flex min-h-0"> {/* Added min-h-0 to prevent flex item growth */}
+      <div className="flex flex-1 min-h-0"> {/* Added min-h-0 to prevent flex item growth */}
         {/* 3D Avatar Section */}
-        <div className="w-1/3 bg-gradient-to-br from-white to-gray-50 border-r border-gray-200 flex flex-col">
+        <div className="flex flex-col bg-gradient-to-br from-white to-gray-50 border-gray-200 border-r w-1/3">
           {/* Avatar Display - Fixed Height */}
-          <div className="h-[400px] relative bg-white flex-shrink-0">
-            <Canvas 
+          <div className="relative flex-shrink-0 bg-white h-[400px]">
+            <Canvas
               camera={{ position: [0, 1.5, 3] }}
               style={{ width: '100%', height: '100%' }}
             >
               <ambientLight intensity={1.5} />
               <directionalLight position={[2, 2, 5]} intensity={0.8} />
-              <pointLight position={[-2, 2, 2]} intensity={0.5} />
-              <HistoricalAvatar figureId={figure.id} speaking={isSpeaking} />
+              <pointLight position={[-2, 2, 2]} intensity={5} />
+              <HistoricalAvatar figureId={figure.id} />
+              <OrbitControls />
             </Canvas>
-            
+
             {/* Speaking Indicator */}
             {isSpeaking && (
-              <div className="absolute bottom-4 left-4 bg-black/80 text-white px-3 py-1 rounded-full text-sm flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <div className="bottom-4 left-4 absolute flex items-center gap-2 bg-black/80 px-3 py-1 rounded-full text-white text-sm">
+                <div className="bg-green-400 rounded-full w-2 h-2 animate-pulse"></div>
                 Speaking...
               </div>
             )}
           </div>
-        
+
           {/* Figure Info Panel - Scrollable if needed */}
-          <div className="flex-1 overflow-y-auto min-h-0"> {/* Added min-h-0 */}
-            <div className="p-6 bg-white border-t border-gray-200">
-              <h3 className="font-bold text-black mb-2">{figure.name}</h3>
-              <p className="text-sm text-gray-600 mb-3 leading-relaxed">{figure.significance}</p>
-              
+          <div className="flex-1 min-h-0 overflow-y-auto"> {/* Added min-h-0 */}
+            <div className="bg-white p-6 border-gray-200 border-t">
+              <h3 className="mb-2 font-bold text-black">{figure.name}</h3>
+              <p className="mb-3 text-gray-600 text-sm leading-relaxed">{figure.significance}</p>
+
               {/* Quick Facts */}
               <div className="space-y-2">
-                <div className="flex items-center gap-2 text-xs text-gray-500">
+                <div className="flex items-center gap-2 text-gray-500 text-xs">
                   <Calendar className="w-3 h-3" />
                   <span>{figure.timeRange}</span>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-gray-500">
+                <div className="flex items-center gap-2 text-gray-500 text-xs">
                   <BookOpen className="w-3 h-3" />
                   <span>{figure.achievements.length} major achievements</span>
                 </div>
               </div>
-        
+
               {/* Key Achievement Preview */}
-              <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                <h4 className="text-xs font-semibold text-black mb-1 uppercase tracking-wide">
+              <div className="bg-gray-50 mt-4 p-3 border border-gray-200 rounded-lg">
+                <h4 className="mb-1 font-semibold text-black text-xs uppercase tracking-wide">
                   Notable Achievement
                 </h4>
-                <p className="text-xs text-gray-600 leading-relaxed">
-                  {figure.achievements[0]}
-                </p>
+                <ul className='space-y-2 list-disc'>
+                  {figure.achievements.map((achievement, idx) => {
+                    return (
+                      <li key={idx.toString()} className="flex flex-col text-gray-600 text-xs leading-relaxed">
+                        {achievement}
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+
+              {/* Quotes Preview */}
+              <div className="bg-gray-50 mt-4 p-3 border border-gray-200 rounded-lg">
+                <h4 className="mb-1 font-semibold text-black text-xs uppercase tracking-wide">
+                  Famous Quotes
+                </h4>
+                <ul className='space-y-2 list-disc'>
+                  {figure.quotes.map((quote, idx) => {
+                    return (
+                      <li key={idx.toString()} className="flex flex-col text-gray-600 text-xs leading-relaxed">
+                        {quote}
+                      </li>
+                    )
+                  })}
+                </ul>
               </div>
             </div>
           </div>
         </div>
 
         {/* Chat Section */}
-        <div className="flex-1 flex flex-col min-h-0"> {/* Added min-h-0 */}
-          <HistoricalChatInterface 
-            figure={figure} 
+        <div className="flex flex-col flex-1 min-h-0"> {/* Added min-h-0 */}
+          <HistoricalChatInterface
+            figure={figure}
             onSpeakingChange={setIsSpeaking}
           />
         </div>

@@ -15,10 +15,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      
+
       <body className="min-h-screen">
-        <div className='mb-12'><Navbar/></div>
-        {children}</body>
+        <Navbar />
+        {children}
+      </body>
     </html>
   )
 }
