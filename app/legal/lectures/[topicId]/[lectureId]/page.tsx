@@ -18,7 +18,6 @@ import {
   Pause
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import SharedNavigation from '@/components/shared-navigation';
 
 interface LectureContent {
   id: string;
@@ -246,15 +245,6 @@ export default function LecturePage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <SharedNavigation 
-        platform="apnawaqeel"
-        breadcrumbs={[
-          { label: 'Legal Education', href: '/legal' },
-          { label: 'Lectures', href: '/legal/lectures' },
-          { label: lecture.topicTitle, href: '/legal/lectures' },
-          { label: lecture.title }
-        ]}
-      />
 
       {/* Lecture Header */}
       <section className="bg-gradient-to-br from-amber-50 to-orange-100 py-12">

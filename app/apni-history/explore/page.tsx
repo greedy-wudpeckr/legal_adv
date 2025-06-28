@@ -185,15 +185,6 @@ export default function ExploreFiguresPage() {
                               Chat with {figure.name.split(' ')[0]}
                             </Button>
                           </Link>
-                          
-                          <Button 
-                            variant="outline" 
-                            className="w-full border-gray-300 text-gray-700 hover:bg-gray-50"
-                            size="sm"
-                          >
-                            <BookOpen className="w-4 h-4 mr-2" />
-                            Learn More
-                          </Button>
                         </div>
                       </div>
 
