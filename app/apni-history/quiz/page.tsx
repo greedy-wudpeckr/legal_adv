@@ -2,68 +2,137 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Play, Trophy, Clock, Target, BookOpen, Star } from 'lucide-react';
+import { 
+  ArrowLeft, Play, Trophy, Clock, Target, BookOpen, Star, Users, 
+  Award, TrendingUp, Crown, Shield, Zap, User
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import HistoryQuizGame from '@/components/history-quiz-game';
+import EnhancedHistoryQuiz from '@/components/enhanced-history-quiz';
+import QuizLeaderboard from '@/components/quiz-leaderboard';
+import UserProfileSection from '@/components/user-profile-section';
 
 const quizCategories = [
   {
     id: 'constitutional-law',
     title: 'Constitutional Law',
     description: 'Test your knowledge of Indian Constitution and fundamental rights',
-    difficulty: 'Medium',
+    difficulty: 'Intermediate',
     questions: 10,
     timeLimit: '5 minutes',
     color: 'from-blue-500 to-indigo-600',
-    icon: BookOpen
-  },
-  {
-    id: 'ancient-history',
-    title: 'Ancient India',
-    description: 'Explore the rich heritage of ancient Indian civilization',
-    difficulty: 'Easy',
-    questions: 10,
-    timeLimit: '5 minutes',
-    color: 'from-amber-500 to-orange-600',
-    icon: Star
+    icon: BookOpen,
+    xpReward: 150
   },
   {
     id: 'freedom-struggle',
     title: 'Freedom Struggle',
     description: 'Learn about India\'s fight for independence',
-    difficulty: 'Hard',
+    difficulty: 'Beginner',
+    questions: 8,
+    timeLimit: '4 minutes',
+    color: 'from-green-500 to-emerald-600',
+    icon: Trophy,
+    xpReward: 100
+  },
+  {
+    id: 'legal-reforms',
+    title: 'Legal Reforms',
+    description: 'Explore major legal reforms in Indian history',
+    difficulty: 'Expert',
+    questions: 12,
+    timeLimit: '6 minutes',
+    color: 'from-purple-500 to-violet-600',
+    icon: Shield,
+    xpReward: 200
+  },
+  {
+    id: 'famous-cases',
+    title: 'Famous Cases',
+    description: 'Study landmark legal cases that shaped Indian law',
+    difficulty: 'Expert',
     questions: 10,
     timeLimit: '5 minutes',
-    color: 'from-green-500 to-emerald-600',
-    icon: Trophy
+    color: 'from-amber-500 to-orange-600',
+    icon: Award,
+    xpReward: 180
+  }
+];
+
+const difficultyLevels = [
+  {
+    id: 'beginner',
+    name: 'Beginner',
+    description: 'Perfect for newcomers to Indian history',
+    color: 'from-green-400 to-green-600',
+    icon: Star,
+    xpMultiplier: 1
+  },
+  {
+    id: 'intermediate',
+    name: 'Intermediate',
+    description: 'For those with some knowledge of history',
+    color: 'from-yellow-400 to-yellow-600',
+    icon: Target,
+    xpMultiplier: 1.5
+  },
+  {
+    id: 'expert',
+    name: 'Expert',
+    description: 'Challenge for history enthusiasts',
+    color: 'from-red-400 to-red-600',
+    icon: Crown,
+    xpMultiplier: 2
   }
 ];
 
 export default function QuizPage() {
-  const [gameMode, setGameMode] = useState<'menu' | 'playing'>('menu');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [gameMode, setGameMode] = useState<'menu' | 'playing' | 'leaderboard' | 'profile'>('menu');
+  const [selectedCategory, setSelectedCategory] = useState<string>('constitutional-law');
+  const [selectedDifficulty, setSelectedDifficulty] = useState<'beginner' | 'intermediate' | 'expert'>('beginner');
 
-  const handleStartQuiz = (categoryId: string) => {
+  const handleStartQuiz = (categoryId: string, difficulty: 'beginner' | 'intermediate' | 'expert') => {
     setSelectedCategory(categoryId);
+    setSelectedDifficulty(difficulty);
     setGameMode('playing');
   };
 
   const handleBackToMenu = () => {
     setGameMode('menu');
-    setSelectedCategory(null);
   };
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty.toLowerCase()) {
-      case 'easy': return 'text-green-600 bg-green-100';
-      case 'medium': return 'text-yellow-600 bg-yellow-100';
-      case 'hard': return 'text-red-600 bg-red-100';
+      case 'beginner': return 'text-green-600 bg-green-100';
+      case 'intermediate': return 'text-yellow-600 bg-yellow-100';
+      case 'expert': return 'text-red-600 bg-red-100';
       default: return 'text-gray-600 bg-gray-100';
     }
   };
 
   if (gameMode === 'playing') {
-    return <HistoryQuizGame onBack={handleBackToMenu} />;
+    return (
+      <EnhancedHistoryQuiz 
+        onBack={handleBackToMenu} 
+        category={selectedCategory}
+        difficulty={selectedDifficulty}
+      />
+    );
+  }
+
+  if (gameMode === 'leaderboard') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="mb-6">
+            <Button onClick={handleBackToMenu} variant="outline" className="mb-4">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Menu
+            </Button>
+          </div>
+          <QuizLeaderboard />
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -71,14 +140,35 @@ export default function QuizPage() {
       {/* Header */}
       <div className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center gap-4">
-            <Link href="/apni-history" className="flex items-center gap-2 text-gray-600 hover:text-black transition-colors">
-              <ArrowLeft className="w-5 h-5" />
-              <span className="font-medium">Back to History</span>
-            </Link>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link href="/apni-history" className="flex items-center gap-2 text-gray-600 hover:text-black transition-colors">
+                <ArrowLeft className="w-5 h-5" />
+                <span className="font-medium">Back to History</span>
+              </Link>
+              <div className="flex items-center gap-3">
+                <Trophy className="w-8 h-8 text-blue-600" />
+                <h1 className="text-2xl font-bold text-black">Quiz Challenge</h1>
+              </div>
+            </div>
+            
             <div className="flex items-center gap-3">
-              <Trophy className="w-8 h-8 text-blue-600" />
-              <h1 className="text-2xl font-bold text-black">History Quiz Challenge</h1>
+              <Button
+                onClick={() => setGameMode('profile')}
+                variant="outline"
+                className="border-blue-300 text-blue-700 hover:bg-blue-50"
+              >
+                <User className="w-4 h-4 mr-2" />
+                Profile
+              </Button>
+              <Button
+                onClick={() => setGameMode('leaderboard')}
+                variant="outline"
+                className="border-purple-300 text-purple-700 hover:bg-purple-50"
+              >
+                <Trophy className="w-4 h-4 mr-2" />
+                Leaderboard
+              </Button>
             </div>
           </div>
         </div>
@@ -89,14 +179,51 @@ export default function QuizPage() {
         <div className="max-w-7xl mx-auto px-6 text-center">
           <div className="max-w-3xl mx-auto">
             <h2 className="text-4xl md:text-5xl font-bold text-black mb-6">
-              Test Your Knowledge
+              Master Indian History
             </h2>
             <p className="text-xl text-gray-700 mb-4">
-              Challenge yourself with interactive quizzes covering Indian history, law, and constitutional principles
+              Challenge yourself with gamified quizzes featuring XP, achievements, and leaderboards
             </p>
             <p className="text-lg text-gray-600">
-              From ancient civilizations to modern legal frameworks, discover how much you really know about India's rich heritage.
+              From constitutional law to freedom struggle, test your knowledge and climb the ranks!
             </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Difficulty Selection */}
+      <section className="py-12">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <h3 className="text-3xl font-bold text-black mb-4">Choose Your Challenge Level</h3>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Select your difficulty level to earn appropriate XP rewards and unlock achievements
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8 mb-12">
+            {difficultyLevels.map((level) => {
+              const Icon = level.icon;
+              return (
+                <div
+                  key={level.id}
+                  className={`bg-gradient-to-br ${level.color} rounded-xl p-6 text-white cursor-pointer transform transition-all duration-300 hover:scale-105 ${
+                    selectedDifficulty === level.id ? 'ring-4 ring-white shadow-2xl' : 'hover:shadow-xl'
+                  }`}
+                  onClick={() => setSelectedDifficulty(level.id as any)}
+                >
+                  <div className="flex items-center gap-3 mb-4">
+                    <Icon className="w-8 h-8" />
+                    <h4 className="text-2xl font-bold">{level.name}</h4>
+                  </div>
+                  <p className="text-white/90 mb-4">{level.description}</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">XP Multiplier:</span>
+                    <span className="font-bold">{level.xpMultiplier}x</span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -105,13 +232,13 @@ export default function QuizPage() {
       <section className="py-12">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-12">
-            <h3 className="text-3xl font-bold text-black mb-4">Choose Your Challenge</h3>
+            <h3 className="text-3xl font-bold text-black mb-4">Quiz Categories</h3>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Select a quiz category to begin your learning journey. Each quiz is designed to test and expand your knowledge.
+              Choose from various categories covering different aspects of Indian legal and historical knowledge
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {quizCategories.map((category) => {
               const Icon = category.icon;
               return (
@@ -125,20 +252,20 @@ export default function QuizPage() {
                       <Icon className="w-8 h-8" />
                       <h4 className="text-xl font-bold">{category.title}</h4>
                     </div>
-                    <p className="text-white/90">{category.description}</p>
+                    <p className="text-white/90 text-sm">{category.description}</p>
                   </div>
 
                   {/* Category Details */}
                   <div className="p-6">
-                    <div className="space-y-4 mb-6">
-                      <div className="flex items-center justify-between">
+                    <div className="space-y-3 mb-6">
+                      <div className="flex items-center justify-between text-sm">
                         <span className="text-gray-600">Difficulty:</span>
-                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${getDifficultyColor(category.difficulty)}`}>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getDifficultyColor(category.difficulty)}`}>
                           {category.difficulty}
                         </span>
                       </div>
                       
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between text-sm">
                         <span className="text-gray-600">Questions:</span>
                         <div className="flex items-center gap-1">
                           <Target className="w-4 h-4 text-gray-500" />
@@ -146,17 +273,25 @@ export default function QuizPage() {
                         </div>
                       </div>
                       
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between text-sm">
                         <span className="text-gray-600">Time Limit:</span>
                         <div className="flex items-center gap-1">
                           <Clock className="w-4 h-4 text-gray-500" />
                           <span className="font-medium text-black">{category.timeLimit}</span>
                         </div>
                       </div>
+
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600">XP Reward:</span>
+                        <div className="flex items-center gap-1">
+                          <Zap className="w-4 h-4 text-yellow-500" />
+                          <span className="font-medium text-yellow-600">+{category.xpReward}</span>
+                        </div>
+                      </div>
                     </div>
 
                     <Button
-                      onClick={() => handleStartQuiz(category.id)}
+                      onClick={() => handleStartQuiz(category.id, selectedDifficulty)}
                       className={`w-full bg-gradient-to-r ${category.color} hover:opacity-90 text-white font-semibold py-3`}
                     >
                       <Play className="w-4 h-4 mr-2" />
@@ -174,80 +309,86 @@ export default function QuizPage() {
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-12">
-            <h3 className="text-3xl font-bold text-black mb-4">Quiz Features</h3>
+            <h3 className="text-3xl font-bold text-black mb-4">Gamification Features</h3>
             <p className="text-lg text-gray-600">
-              Experience interactive learning with our comprehensive quiz system
+              Experience next-level learning with our comprehensive gamification system
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             <div className="text-center">
               <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Clock className="w-8 h-8 text-blue-600" />
+                <Zap className="w-8 h-8 text-blue-600" />
               </div>
-              <h4 className="text-lg font-semibold text-black mb-2">Timed Challenges</h4>
-              <p className="text-gray-600 text-sm">30-second timer for each question to test your quick thinking</p>
-            </div>
-
-            <div className="text-center">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Target className="w-8 h-8 text-green-600" />
-              </div>
-              <h4 className="text-lg font-semibold text-black mb-2">Instant Feedback</h4>
-              <p className="text-gray-600 text-sm">Get immediate explanations for correct and incorrect answers</p>
+              <h4 className="text-lg font-semibold text-black mb-2">XP & Levels</h4>
+              <p className="text-gray-600 text-sm">Earn experience points and level up with streak bonuses and multipliers</p>
             </div>
 
             <div className="text-center">
               <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Trophy className="w-8 h-8 text-purple-600" />
+                <Award className="w-8 h-8 text-purple-600" />
               </div>
-              <h4 className="text-lg font-semibold text-black mb-2">Score Tracking</h4>
-              <p className="text-gray-600 text-sm">Track your progress and see detailed performance analytics</p>
+              <h4 className="text-lg font-semibold text-black mb-2">Achievements</h4>
+              <p className="text-gray-600 text-sm">Unlock badges and achievements for various milestones and accomplishments</p>
+            </div>
+
+            <div className="text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Users className="w-8 h-8 text-green-600" />
+              </div>
+              <h4 className="text-lg font-semibold text-black mb-2">Leaderboards</h4>
+              <p className="text-gray-600 text-sm">Compete with others and see your ranking across different categories</p>
             </div>
 
             <div className="text-center">
               <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <BookOpen className="w-8 h-8 text-amber-600" />
+                <Shield className="w-8 h-8 text-amber-600" />
               </div>
-              <h4 className="text-lg font-semibold text-black mb-2">Multiple Formats</h4>
-              <p className="text-gray-600 text-sm">Text, image, and scenario-based questions for varied learning</p>
+              <h4 className="text-lg font-semibold text-black mb-2">Lifelines</h4>
+              <p className="text-gray-600 text-sm">Use strategic lifelines like 50-50, expert advice, and extra time</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* Call to Action */}
-      <section className="py-16 bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+      <section className="py-16 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
         <div className="max-w-4xl mx-auto px-6 text-center">
           <Trophy className="w-16 h-16 mx-auto mb-6 text-blue-200" />
           <h2 className="text-3xl font-bold mb-4">
-            Ready to Test Your Knowledge?
+            Ready to Become a History Master?
           </h2>
           <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-            Start with any quiz category and challenge yourself to learn more about India's fascinating history and legal heritage.
+            Start your journey to the top of the leaderboard and unlock all achievements!
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
-              onClick={() => handleStartQuiz('constitutional-law')}
+              onClick={() => handleStartQuiz('constitutional-law', selectedDifficulty)}
               size="lg"
               className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-3 font-semibold"
             >
               <Play className="w-5 h-5 mr-2" />
-              Start Constitutional Law Quiz
+              Start First Quiz
             </Button>
-            <Link href="/apni-history">
-              <Button 
-                variant="outline" 
-                size="lg"
-                className="border-white text-white hover:bg-white hover:text-blue-600 px-8 py-3 font-semibold"
-              >
-                Explore More History
-              </Button>
-            </Link>
+            <Button 
+              onClick={() => setGameMode('leaderboard')}
+              variant="outline" 
+              size="lg"
+              className="border-white text-white hover:bg-white hover:text-blue-600 px-8 py-3 font-semibold"
+            >
+              <Trophy className="w-5 h-5 mr-2" />
+              View Leaderboard
+            </Button>
           </div>
         </div>
       </section>
+
+      {/* User Profile Modal */}
+      <UserProfileSection 
+        isVisible={gameMode === 'profile'}
+        onClose={() => setGameMode('menu')}
+      />
     </div>
   );
 }
