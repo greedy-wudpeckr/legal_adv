@@ -423,6 +423,5 @@ export default function CourtroomBattle() {
           theme="amber"
         />
       </div>
-    </Layout>
   );
 }

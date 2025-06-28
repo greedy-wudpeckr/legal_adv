@@ -26,6 +26,5 @@ export default function LegalHome() {
 
         <Toaster />
       </div>
-    </Layout>
   )
 }
