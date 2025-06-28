@@ -4,13 +4,18 @@ import { useState, useEffect, useRef } from 'react';
 import { 
   Clock, Trophy, RotateCcw, ArrowLeft, CheckCircle, XCircle, Star, 
   Zap, Target, Award, Users, TrendingUp, Gift, HelpCircle, Timer,
-  Sparkles, Crown, Medal, Shield
+  Sparkles, Crown, Medal, Shield, MessageSquare, Share2, Download
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { QuizQuestion, QuizResult, UserStats, Lifeline, XP_REWARDS } from '@/types/quiz';
 import { getUserStats, saveUserStats, addLeaderboardEntry, checkAchievements, calculateLevel, getXPForNextLevel } from '@/lib/quiz-storage';
 import ConfettiAnimation from '@/components/confetti-animation';
+import HistoricalFigureHost from '@/components/historical-figure-host';
+import QuizReviewMode from '@/components/quiz-review-mode';
+import SocialShareResults from '@/components/social-share-results';
+import PDFCertificateGenerator from '@/components/pdf-certificate-generator';
+import { getQuestionsByCategory, getRandomQuestions } from '@/data/comprehensive-question-bank';
 
 interface EnhancedHistoryQuizProps {
   onBack?: () => void;
@@ -19,70 +24,16 @@ interface EnhancedHistoryQuizProps {
   questions?: QuizQuestion[];
 }
 
-const sampleQuestions: Record<string, QuizQuestion[]> = {
-  'constitutional-law': [
-    {
-      id: 'cl1',
-      type: 'text',
-      question: 'Who is known as the "Father of the Indian Constitution"?',
-      options: ['Mahatma Gandhi', 'Dr. B.R. Ambedkar', 'Jawaharlal Nehru', 'Sardar Patel'],
-      correctAnswer: 1,
-      explanation: 'Dr. B.R. Ambedkar is known as the Father of the Indian Constitution for his pivotal role as the Chairman of the Drafting Committee.',
-      difficulty: 'beginner',
-      category: 'constitutional-law',
-      points: 10
-    },
-    {
-      id: 'cl2',
-      type: 'text',
-      question: 'Which Article of the Indian Constitution deals with the Right to Equality?',
-      options: ['Article 12', 'Article 14', 'Article 19', 'Article 21'],
-      correctAnswer: 1,
-      explanation: 'Article 14 guarantees equality before law and equal protection of laws to all persons within the territory of India.',
-      difficulty: 'intermediate',
-      category: 'constitutional-law',
-      points: 15
-    },
-    {
-      id: 'cl3',
-      type: 'scenario',
-      question: 'The Doctrine of Basic Structure was established in which landmark case?',
-      options: ['Golaknath Case', 'Kesavananda Bharati Case', 'Minerva Mills Case', 'Maneka Gandhi Case'],
-      correctAnswer: 1,
-      explanation: 'The Kesavananda Bharati v. State of Kerala (1973) case established the Doctrine of Basic Structure, limiting Parliament\'s power to amend the Constitution.',
-      difficulty: 'expert',
-      category: 'constitutional-law',
-      points: 25
-    }
-  ],
-  'freedom-struggle': [
-    {
-      id: 'fs1',
-      type: 'text',
-      question: 'The Quit India Movement was launched in which year?',
-      options: ['1940', '1942', '1944', '1946'],
-      correctAnswer: 1,
-      explanation: 'The Quit India Movement was launched on August 8, 1942, by Mahatma Gandhi, demanding an end to British rule in India.',
-      difficulty: 'beginner',
-      category: 'freedom-struggle',
-      points: 10
-    },
-    {
-      id: 'fs2',
-      type: 'scenario',
-      question: 'Who gave the famous slogan "Give me blood, and I will give you freedom"?',
-      options: ['Mahatma Gandhi', 'Subhas Chandra Bose', 'Bhagat Singh', 'Chandrashekhar Azad'],
-      correctAnswer: 1,
-      explanation: 'Subhas Chandra Bose gave this famous slogan while leading the Indian National Army (Azad Hind Fauj) during World War II.',
-      difficulty: 'intermediate',
-      category: 'freedom-struggle',
-      points: 15
-    }
-  ]
+// Map categories to historical figures
+const categoryFigures = {
+  'constitutional-law': 'ambedkar',
+  'freedom-struggle': 'gandhi',
+  'legal-reforms': 'nehru',
+  'famous-cases': 'patel'
 };
 
 export default function EnhancedHistoryQuiz({ onBack, category, difficulty, questions }: EnhancedHistoryQuizProps) {
-  const [gameState, setGameState] = useState<'playing' | 'finished'>('playing');
+  const [gameState, setGameState] = useState<'intro' | 'playing' | 'finished' | 'review'>('intro');
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [timeLeft, setTimeLeft] = useState(30);
@@ -96,19 +47,35 @@ export default function EnhancedHistoryQuiz({ onBack, category, difficulty, ques
   const [xpEarned, setXpEarned] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
   const [newAchievements, setNewAchievements] = useState<any[]>([]);
+  const [showLifelineAdvice, setShowLifelineAdvice] = useState(false);
+  const [lifelineMessage, setLifelineMessage] = useState('');
   const [lifelines, setLifelines] = useState<Lifeline[]>([
     { id: 'fifty-fifty', name: '50-50', description: 'Remove two wrong answers', icon: '🎯', used: false, cost: 50 },
     { id: 'ask-expert', name: 'Ask Expert', description: 'Get advice from a historical figure', icon: '🎓', used: false, cost: 75 },
     { id: 'extra-time', name: 'Extra Time', description: 'Add 15 seconds to the timer', icon: '⏰', used: false, cost: 25 }
   ]);
+  const [eliminatedOptions, setEliminatedOptions] = useState<number[]>([]);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const quizQuestions = questions || sampleQuestions[category] || sampleQuestions['constitutional-law'];
+  const quizQuestions = questions || getQuestionsByCategory(category, difficulty, 10);
   const currentQuestion = quizQuestions[currentQuestionIndex];
+  const figureId = categoryFigures[category as keyof typeof categoryFigures] || 'gandhi';
+
+  // Load questions on mount
+  useEffect(() => {
+    if (!questions) {
+      const loadedQuestions = getQuestionsByCategory(category, difficulty, 10);
+      if (loadedQuestions.length === 0) {
+        // Fallback to random questions if category is empty
+        const randomQuestions = getRandomQuestions(10);
+        quizQuestions.push(...randomQuestions);
+      }
+    }
+  }, [category, difficulty]);
 
   // Timer effect
   useEffect(() => {
-    if (gameState === 'playing' && !showExplanation) {
+    if (gameState === 'playing' && !showExplanation && !showLifelineAdvice) {
       timerRef.current = setInterval(() => {
         setTimeLeft(prev => {
           if (prev <= 1) {
@@ -125,7 +92,7 @@ export default function EnhancedHistoryQuiz({ onBack, category, difficulty, ques
         clearInterval(timerRef.current);
       }
     };
-  }, [gameState, showExplanation, currentQuestionIndex]);
+  }, [gameState, showExplanation, showLifelineAdvice, currentQuestionIndex]);
 
   // Reset timer when question changes
   useEffect(() => {
@@ -133,6 +100,7 @@ export default function EnhancedHistoryQuiz({ onBack, category, difficulty, ques
     setSelectedAnswer(null);
     setShowExplanation(false);
     setQuestionStartTime(Date.now());
+    setEliminatedOptions([]);
   }, [currentQuestionIndex]);
 
   const handleTimeUp = () => {
@@ -142,7 +110,7 @@ export default function EnhancedHistoryQuiz({ onBack, category, difficulty, ques
   };
 
   const handleAnswerSelect = (answerIndex: number) => {
-    if (selectedAnswer === null && !showExplanation) {
+    if (selectedAnswer === null && !showExplanation && !eliminatedOptions.includes(answerIndex)) {
       setSelectedAnswer(answerIndex);
     }
   };
@@ -216,6 +184,18 @@ export default function EnhancedHistoryQuiz({ onBack, category, difficulty, ques
       updatedStats.difficultyStats[difficulty].won += 1;
     }
 
+    // Set favorite category
+    if (!updatedStats.favoriteCategory) {
+      updatedStats.favoriteCategory = category;
+    } else {
+      const currentFavCount = updatedStats.categoriesPlayed[updatedStats.favoriteCategory] || 0;
+      const newCatCount = updatedStats.categoriesPlayed[category] || 0;
+      
+      if (newCatCount > currentFavCount) {
+        updatedStats.favoriteCategory = category;
+      }
+    }
+
     // Check for achievements
     const achievements = checkAchievements(updatedStats, {
       score: finalScore,
@@ -267,10 +247,20 @@ export default function EnhancedHistoryQuiz({ onBack, category, difficulty, ques
 
     switch (lifelineId) {
       case 'fifty-fifty':
-        // Remove two wrong answers (implementation would modify question display)
+        // Remove two wrong answers
+        const correctAnswer = currentQuestion.correctAnswer;
+        const wrongOptions = [0, 1, 2, 3].filter(idx => idx !== correctAnswer);
+        const toEliminate = wrongOptions.sort(() => Math.random() - 0.5).slice(0, 2);
+        setEliminatedOptions(toEliminate);
         break;
       case 'ask-expert':
-        // Show expert advice (implementation would show modal with hint)
+        // Show expert advice
+        setShowLifelineAdvice(true);
+        setLifelineMessage('');
+        // Pause timer while showing advice
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+        }
         break;
       case 'extra-time':
         setTimeLeft(prev => prev + 15);
@@ -278,8 +268,24 @@ export default function EnhancedHistoryQuiz({ onBack, category, difficulty, ques
     }
   };
 
+  const handleLifelineClose = () => {
+    setShowLifelineAdvice(false);
+    // Restart timer
+    if (gameState === 'playing' && !showExplanation) {
+      timerRef.current = setInterval(() => {
+        setTimeLeft(prev => {
+          if (prev <= 1) {
+            handleTimeUp();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+  };
+
   const resetGame = () => {
-    setGameState('playing');
+    setGameState('intro');
     setCurrentQuestionIndex(0);
     setSelectedAnswer(null);
     setTimeLeft(30);
@@ -293,6 +299,15 @@ export default function EnhancedHistoryQuiz({ onBack, category, difficulty, ques
     setShowConfetti(false);
     setNewAchievements([]);
     setLifelines(prev => prev.map(l => ({ ...l, used: false })));
+    setEliminatedOptions([]);
+  };
+
+  const handleStartQuiz = () => {
+    setGameState('playing');
+  };
+
+  const handleReviewQuiz = () => {
+    setGameState('review');
   };
 
   const getScorePercentage = () => {
@@ -318,6 +333,56 @@ export default function EnhancedHistoryQuiz({ onBack, category, difficulty, ques
     }
   };
 
+  // Intro screen with historical figure
+  if (gameState === 'intro') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-4">
+                {onBack && (
+                  <Button onClick={onBack} variant="ghost" size="sm">
+                    <ArrowLeft className="w-4 h-4" />
+                  </Button>
+                )}
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-800">History Quiz</h1>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <span className={`px-2 py-1 rounded-full ${getDifficultyColor(difficulty)}`}>
+                      {difficulty}
+                    </span>
+                    <span>•</span>
+                    <span>{category.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <HistoricalFigureHost 
+            figureId={figureId}
+            category={category}
+            onIntroComplete={handleStartQuiz}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // Review mode
+  if (gameState === 'review') {
+    return (
+      <QuizReviewMode 
+        questions={quizQuestions}
+        results={results}
+        onBack={() => setGameState('finished')}
+        onRetakeQuiz={resetGame}
+      />
+    );
+  }
+
+  // Results screen
   if (gameState === 'finished') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -381,6 +446,10 @@ export default function EnhancedHistoryQuiz({ onBack, category, difficulty, ques
                 <RotateCcw className="w-4 h-4 mr-2" />
                 Play Again
               </Button>
+              <Button onClick={handleReviewQuiz} className="bg-purple-600 hover:bg-purple-700 text-white">
+                <BookOpen className="w-4 h-4 mr-2" />
+                Review Answers
+              </Button>
               {onBack && (
                 <Button onClick={onBack} variant="outline" className="border-gray-300">
                   <ArrowLeft className="w-4 h-4 mr-2" />
@@ -430,6 +499,50 @@ export default function EnhancedHistoryQuiz({ onBack, category, difficulty, ques
                   ))}
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Share Results */}
+          <div className="grid md:grid-cols-2 gap-6">
+            <SocialShareResults 
+              score={score}
+              totalQuestions={quizQuestions.length}
+              category={category}
+              difficulty={difficulty}
+              xpEarned={xpEarned}
+              achievements={newAchievements}
+            />
+
+            <PDFCertificateGenerator 
+              playerName="Quiz Champion"
+              score={score}
+              totalQuestions={quizQuestions.length}
+              category={category}
+              difficulty={difficulty}
+              completedAt={new Date()}
+              xpEarned={xpEarned}
+            />
+          </div>
+
+          {/* Post-Quiz Discussion */}
+          <div className="bg-white rounded-xl shadow-lg p-6 mt-6">
+            <div className="flex items-center gap-3 mb-4">
+              <MessageSquare className="w-6 h-6 text-indigo-600" />
+              <h3 className="text-xl font-semibold text-gray-800">Continue Learning</h3>
+            </div>
+            <p className="text-gray-700 mb-4">
+              Want to learn more about this topic? Chat with our historical figures to deepen your understanding.
+            </p>
+            <div className="flex justify-center">
+              <Button 
+                onClick={() => window.location.href = `/apni-history/chat/${figureId}`}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                <MessageSquare className="w-4 h-4 mr-2" />
+                Chat with {figureId === 'gandhi' ? 'Gandhi' : 
+                           figureId === 'ambedkar' ? 'Ambedkar' : 
+                           figureId === 'nehru' ? 'Nehru' : 'Patel'}
+              </Button>
             </div>
           </div>
         </div>
@@ -496,7 +609,7 @@ export default function EnhancedHistoryQuiz({ onBack, category, difficulty, ques
               <Button
                 key={lifeline.id}
                 onClick={() => useLifeline(lifeline.id)}
-                disabled={lifeline.used || userStats.totalXP < lifeline.cost}
+                disabled={lifeline.used || userStats.totalXP < lifeline.cost || showExplanation}
                 variant="outline"
                 size="sm"
                 className={`${lifeline.used ? 'opacity-50' : ''}`}
@@ -508,6 +621,23 @@ export default function EnhancedHistoryQuiz({ onBack, category, difficulty, ques
             ))}
           </div>
         </div>
+
+        {/* Expert Advice Lifeline */}
+        {showLifelineAdvice && (
+          <div className="mb-6">
+            <HistoricalFigureHost 
+              figureId={figureId}
+              category={category}
+              isLifeline={true}
+              message={lifelineMessage}
+            />
+            <div className="text-center mt-4">
+              <Button onClick={handleLifelineClose} className="bg-amber-600 hover:bg-amber-700 text-white">
+                Continue Quiz
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Question Card */}
         <div className="bg-white rounded-xl shadow-lg p-8 mb-6">
@@ -537,7 +667,10 @@ export default function EnhancedHistoryQuiz({ onBack, category, difficulty, ques
             {currentQuestion.options.map((option, index) => {
               let buttonClass = "w-full p-4 text-left rounded-lg border-2 transition-all duration-200 hover:scale-105";
               
-              if (showExplanation) {
+              // Handle 50-50 lifeline
+              if (eliminatedOptions.includes(index)) {
+                buttonClass += " opacity-30 cursor-not-allowed";
+              } else if (showExplanation) {
                 if (index === currentQuestion.correctAnswer) {
                   buttonClass += " border-green-500 bg-green-50 text-green-800";
                 } else if (index === selectedAnswer && index !== currentQuestion.correctAnswer) {
@@ -555,7 +688,7 @@ export default function EnhancedHistoryQuiz({ onBack, category, difficulty, ques
                 <button
                   key={index}
                   onClick={() => handleAnswerSelect(index)}
-                  disabled={showExplanation}
+                  disabled={showExplanation || eliminatedOptions.includes(index)}
                   className={buttonClass}
                 >
                   <div className="flex items-center gap-3">

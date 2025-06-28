@@ -4,12 +4,15 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { 
   ArrowLeft, Play, Trophy, Clock, Target, BookOpen, Star, Users, 
-  Award, TrendingUp, Crown, Shield, Zap, User
+  Award, TrendingUp, Crown, Shield, Zap, User, Calendar, Settings
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import EnhancedHistoryQuiz from '@/components/enhanced-history-quiz';
 import QuizLeaderboard from '@/components/quiz-leaderboard';
 import UserProfileSection from '@/components/user-profile-section';
+import DailyChallengeMode from '@/components/daily-challenge-mode';
+import AdminQuestionPanel from '@/components/admin-question-panel';
+import { QuizQuestion } from '@/types/quiz';
 
 const quizCategories = [
   {
@@ -21,7 +24,8 @@ const quizCategories = [
     timeLimit: '5 minutes',
     color: 'from-blue-500 to-indigo-600',
     icon: BookOpen,
-    xpReward: 150
+    xpReward: 150,
+    figureId: 'ambedkar'
   },
   {
     id: 'freedom-struggle',
@@ -32,7 +36,8 @@ const quizCategories = [
     timeLimit: '4 minutes',
     color: 'from-green-500 to-emerald-600',
     icon: Trophy,
-    xpReward: 100
+    xpReward: 100,
+    figureId: 'gandhi'
   },
   {
     id: 'legal-reforms',
@@ -43,7 +48,8 @@ const quizCategories = [
     timeLimit: '6 minutes',
     color: 'from-purple-500 to-violet-600',
     icon: Shield,
-    xpReward: 200
+    xpReward: 200,
+    figureId: 'nehru'
   },
   {
     id: 'famous-cases',
@@ -54,7 +60,8 @@ const quizCategories = [
     timeLimit: '5 minutes',
     color: 'from-amber-500 to-orange-600',
     icon: Award,
-    xpReward: 180
+    xpReward: 180,
+    figureId: 'patel'
   }
 ];
 
@@ -86,9 +93,10 @@ const difficultyLevels = [
 ];
 
 export default function QuizPage() {
-  const [gameMode, setGameMode] = useState<'menu' | 'playing' | 'leaderboard' | 'profile'>('menu');
+  const [gameMode, setGameMode] = useState<'menu' | 'playing' | 'leaderboard' | 'profile' | 'daily-challenge' | 'admin'>('menu');
   const [selectedCategory, setSelectedCategory] = useState<string>('constitutional-law');
   const [selectedDifficulty, setSelectedDifficulty] = useState<'beginner' | 'intermediate' | 'expert'>('beginner');
+  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
 
   const handleStartQuiz = (categoryId: string, difficulty: 'beginner' | 'intermediate' | 'expert') => {
     setSelectedCategory(categoryId);
@@ -96,8 +104,14 @@ export default function QuizPage() {
     setGameMode('playing');
   };
 
+  const handleStartDailyChallenge = (questions: QuizQuestion[]) => {
+    setQuizQuestions(questions);
+    setGameMode('playing');
+  };
+
   const handleBackToMenu = () => {
     setGameMode('menu');
+    setQuizQuestions([]);
   };
 
   const getDifficultyColor = (difficulty: string) => {
@@ -115,6 +129,7 @@ export default function QuizPage() {
         onBack={handleBackToMenu} 
         category={selectedCategory}
         difficulty={selectedDifficulty}
+        questions={quizQuestions.length > 0 ? quizQuestions : undefined}
       />
     );
   }
@@ -130,6 +145,34 @@ export default function QuizPage() {
             </Button>
           </div>
           <QuizLeaderboard />
+        </div>
+      </div>
+    );
+  }
+
+  if (gameMode === 'daily-challenge') {
+    return (
+      <DailyChallengeMode 
+        onStartChallenge={handleStartDailyChallenge}
+        onBack={handleBackToMenu}
+      />
+    );
+  }
+
+  if (gameMode === 'admin') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="mb-6">
+            <Button onClick={handleBackToMenu} variant="outline" className="mb-4">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Menu
+            </Button>
+          </div>
+          <AdminQuestionPanel 
+            isVisible={true}
+            onClose={handleBackToMenu}
+          />
         </div>
       </div>
     );
@@ -154,6 +197,14 @@ export default function QuizPage() {
             
             <div className="flex items-center gap-3">
               <Button
+                onClick={() => setGameMode('daily-challenge')}
+                variant="outline"
+                className="border-orange-300 text-orange-700 hover:bg-orange-50"
+              >
+                <Calendar className="w-4 h-4 mr-2" />
+                Daily Challenge
+              </Button>
+              <Button
                 onClick={() => setGameMode('profile')}
                 variant="outline"
                 className="border-blue-300 text-blue-700 hover:bg-blue-50"
@@ -168,6 +219,14 @@ export default function QuizPage() {
               >
                 <Trophy className="w-4 h-4 mr-2" />
                 Leaderboard
+              </Button>
+              <Button
+                onClick={() => setGameMode('admin')}
+                variant="outline"
+                className="border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                Admin
               </Button>
             </div>
           </div>
@@ -288,6 +347,18 @@ export default function QuizPage() {
                           <span className="font-medium text-yellow-600">+{category.xpReward}</span>
                         </div>
                       </div>
+
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600">Host:</span>
+                        <div className="flex items-center gap-1">
+                          <Users className="w-4 h-4 text-gray-500" />
+                          <span className="font-medium text-black">
+                            {category.figureId === 'gandhi' ? 'Mahatma Gandhi' : 
+                             category.figureId === 'ambedkar' ? 'Dr. Ambedkar' : 
+                             category.figureId === 'nehru' ? 'Pandit Nehru' : 'Sardar Patel'}
+                          </span>
+                        </div>
+                      </div>
                     </div>
 
                     <Button
@@ -336,8 +407,8 @@ export default function QuizPage() {
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Users className="w-8 h-8 text-green-600" />
               </div>
-              <h4 className="text-lg font-semibold text-black mb-2">Leaderboards</h4>
-              <p className="text-gray-600 text-sm">Compete with others and see your ranking across different categories</p>
+              <h4 className="text-lg font-semibold text-black mb-2">Historical Hosts</h4>
+              <p className="text-gray-600 text-sm">Learn from legendary figures like Gandhi, Ambedkar, Nehru, and Patel</p>
             </div>
 
             <div className="text-center">
@@ -364,21 +435,20 @@ export default function QuizPage() {
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
-              onClick={() => handleStartQuiz('constitutional-law', selectedDifficulty)}
+              onClick={() => setGameMode('daily-challenge')}
               size="lg"
               className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-3 font-semibold"
             >
-              <Play className="w-5 h-5 mr-2" />
-              Start First Quiz
+              <Calendar className="w-5 h-5 mr-2" />
+              Daily Challenge
             </Button>
             <Button 
-              onClick={() => setGameMode('leaderboard')}
-              variant="outline" 
+              onClick={() => handleStartQuiz('constitutional-law', selectedDifficulty)}
               size="lg"
-              className="border-white text-white hover:bg-white hover:text-blue-600 px-8 py-3 font-semibold"
+              className="bg-white/20 text-white hover:bg-white/30 px-8 py-3 font-semibold"
             >
-              <Trophy className="w-5 h-5 mr-2" />
-              View Leaderboard
+              <Play className="w-5 h-5 mr-2" />
+              Start First Quiz
             </Button>
           </div>
         </div>
