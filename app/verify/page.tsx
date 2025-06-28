@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
 import { useSearchParams } from 'next/navigation';
 
-const EmailForm: React.FC<{ email?: string }> = ({ email: initialEmail }) => {
+// Component that uses useSearchParams
+const EmailFormContent: React.FC = () => {
     const searchParams = useSearchParams();
     const email = searchParams.get('email') || '';
     const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
@@ -74,6 +75,25 @@ const EmailForm: React.FC<{ email?: string }> = ({ email: initialEmail }) => {
                 )}
             </div>
         </div>
+    );
+};
+
+// Loading component
+const LoadingFallback = () => (
+    <div className="flex justify-center items-center bg-black h-screen">
+        <div className="z-50 bg-white p-8 border rounded-md w-96 h-[515px] flex flex-col justify-center items-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mb-4"></div>
+            <p className="text-gray-600">Loading...</p>
+        </div>
+    </div>
+);
+
+// Main component with Suspense wrapper
+const EmailForm: React.FC = () => {
+    return (
+        <Suspense fallback={<LoadingFallback />}>
+            <EmailFormContent />
+        </Suspense>
     );
 };
 

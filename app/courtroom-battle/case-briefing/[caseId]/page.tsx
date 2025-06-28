@@ -18,7 +18,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { getCaseById } from '@/data/sample-cases';
 import { CaseBriefing } from '@/types/case';
-import SharedNavigation from '@/components/shared-navigation';
 
 export default function CaseBriefingPage() {
   const params = useParams();
@@ -86,14 +85,6 @@ export default function CaseBriefingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
-      <SharedNavigation 
-        platform="apnawaqeel"
-        breadcrumbs={[
-          { label: 'Legal Education', href: '/legal' },
-          { label: 'Courtroom Battle', href: '/courtroom-battle' },
-          { label: 'Case Briefing' }
-        ]}
-      />
 
       <div className="max-w-6xl mx-auto px-6 py-8">
         {/* Case Header */}
