@@ -874,15 +874,6 @@ export default function BattlePage() {
       battleState.flashEffect === 'green' ? 'bg-green-100' : 
       battleState.flashEffect === 'red' ? 'bg-red-100' : ''
     }`}>
-      <SharedNavigation 
-        platform="apnawaqeel"
-        breadcrumbs={[
-          { label: 'Legal Education', href: '/legal' },
-          { label: 'Courtroom Battle', href: '/courtroom-battle' },
-          { label: 'Case Briefing', href: `/courtroom-battle/case-briefing/${caseId}` },
-          { label: 'Battle' }
-        ]}
-      />
 
       {/* Phase Status Bar */}
       <div className="bg-white border-b border-amber-200 py-4">

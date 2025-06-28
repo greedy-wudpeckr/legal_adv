@@ -8,10 +8,10 @@ import { sampleCases, getCaseStats } from '@/data/sample-cases';
 import { getPlayerStats } from '@/lib/progression';
 import { PlayerStats } from '@/types/progression';
 import PlayerStatsComponent from '@/components/player-stats';
-import SharedNavigation from '@/components/shared-navigation';
 import QuickFactsCard from '@/components/ui/quick-facts-card';
 import SettingsPanel from '@/components/ui/settings-panel';
 import HelpOverlay from '@/components/ui/help-overlay';
+import { Layout } from '@/components/layout/Layout';
 
 const caseCategories = [
   { id: 'murder', name: 'Murder', description: 'Homicide and related charges', color: 'bg-red-100 border-red-300 text-red-800' },
@@ -110,13 +110,6 @@ export default function CourtroomBattle() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
-      <SharedNavigation 
-        platform="apnawaqeel"
-        breadcrumbs={[
-          { label: 'Legal Education', href: '/legal' },
-          { label: 'Courtroom Battle' }
-        ]}
-      />
 
       {/* Main Content */}
       <div className="max-w-6xl mx-auto px-6 py-12">
@@ -193,242 +186,242 @@ export default function CourtroomBattle() {
           </div>
         </div>
 
-        {/* Difficulty Filter */}
-        <div className="bg-white rounded-xl shadow-lg p-8 mb-8 border border-amber-200">
-          <h3 className="text-2xl font-semibold text-gray-800 mb-6 text-center">Choose Difficulty Level</h3>
-          
-          <div className="grid md:grid-cols-3 gap-6 mb-6">
-            {difficultyLevels.map((level) => {
-              const isUnlocked = isDifficultyUnlocked(level.id);
-              return (
-                <div
-                  key={level.id}
-                  className={`p-6 rounded-lg border-2 transition-all duration-200 ${
-                    !isUnlocked 
-                      ? 'bg-gray-100 border-gray-300 opacity-60 cursor-not-allowed'
-                      : selectedDifficulty === level.id 
-                        ? `${level.color} shadow-md scale-105 cursor-pointer` 
-                        : 'bg-gray-50 border-gray-200 hover:border-amber-300 cursor-pointer hover:shadow-md'
-                  }`}
-                  onClick={() => isUnlocked && setSelectedDifficulty(selectedDifficulty === level.id ? null : level.id)}
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-xl font-semibold">{level.name}</h4>
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl">{level.icon}</span>
-                      {!isUnlocked && <Lock className="w-5 h-5 text-gray-500" />}
-                      {isUnlocked && <Unlock className="w-5 h-5 text-green-600" />}
-                    </div>
-                  </div>
-                  <p className="text-sm opacity-80 mb-2">{level.description}</p>
-                  <div className="text-xs font-medium">
-                    {stats.byDifficulty[level.id as keyof typeof stats.byDifficulty]} cases available
-                  </div>
-                  {!isUnlocked && (
-                    <div className="mt-2 text-xs text-gray-500">
-                      {level.id === 'intermediate' ? 'Win 1 case to unlock' : 'Win 3 cases to unlock'}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {selectedDifficulty && (
-            <div className="text-center">
-              <Button 
-                onClick={() => setSelectedDifficulty(null)}
-                variant="outline"
-                className="border-amber-300 text-amber-700 hover:bg-amber-50"
-              >
-                Show All Difficulties
-              </Button>
-            </div>
-          )}
-        </div>
-
-        {/* Case Categories */}
-        <div className="bg-white rounded-xl shadow-lg p-8 mb-8 border border-amber-200">
-          <h3 className="text-2xl font-semibold text-gray-800 mb-6 text-center">Case Categories</h3>
-          
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-            {caseCategories.map((category) => (
-              <div
-                key={category.id}
-                className={`p-6 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:shadow-md ${
-                  selectedCategory === category.id 
-                    ? `${category.color} shadow-md scale-105` 
-                    : 'bg-gray-50 border-gray-200 hover:border-amber-300'
-                }`}
-                onClick={() => setSelectedCategory(selectedCategory === category.id ? null : category.id)}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-xl font-semibold">{category.name}</h4>
-                  <Scale className="w-6 h-6 text-amber-600" />
-                </div>
-                <p className="text-sm opacity-80 mb-2">{category.description}</p>
-                <div className="text-xs font-medium">
-                  {stats.byCategory[category.id as keyof typeof stats.byCategory]} cases
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {selectedCategory && (
-            <div className="text-center">
-              <Button 
-                onClick={() => setSelectedCategory(null)}
-                variant="outline"
-                className="border-amber-300 text-amber-700 hover:bg-amber-50"
-              >
-                Show All Categories
-              </Button>
-            </div>
-          )}
-        </div>
-
-        {/* Available Cases */}
-        <div className="bg-white rounded-xl shadow-lg p-8 border border-amber-200">
-          <h3 className="text-2xl font-semibold text-gray-800 mb-6 text-center">
-            {selectedCategory || selectedDifficulty ? 'Filtered Cases' : 'Available Cases'}
-            <span className="text-lg text-gray-500 ml-2">({availableCases.length})</span>
-          </h3>
-          
-          <div className="space-y-6">
-            {sampleCases.map((caseItem) => {
-              const isUnlocked = isCaseUnlocked(caseItem.caseId);
-              const isDiffUnlocked = isDifficultyUnlocked(caseItem.difficulty);
-              const isVisible = !selectedCategory || caseItem.category === selectedCategory;
-              const isDiffVisible = !selectedDifficulty || caseItem.difficulty === selectedDifficulty;
-              
-              if (!isVisible || !isDiffVisible) return null;
-              
-              return (
-                <div key={caseItem.caseId} className={`border rounded-lg p-6 transition-shadow ${
-                  isUnlocked && isDiffUnlocked 
-                    ? 'border-gray-200 hover:shadow-md' 
-                    : 'border-gray-300 bg-gray-50 opacity-60'
-                }`}>
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h4 className="text-xl font-semibold text-gray-800">{caseItem.title}</h4>
-                        <span className="text-lg">{getDifficultyStars(caseItem.difficulty)}</span>
+          {/* Difficulty Filter */}
+          <div className="bg-white rounded-xl shadow-lg p-8 mb-8 border border-amber-200">
+            <h3 className="text-2xl font-semibold text-gray-800 mb-6 text-center">Choose Difficulty Level</h3>
+            
+            <div className="grid md:grid-cols-3 gap-6 mb-6">
+              {difficultyLevels.map((level) => {
+                const isUnlocked = isDifficultyUnlocked(level.id);
+                return (
+                  <div
+                    key={level.id}
+                    className={`p-6 rounded-lg border-2 transition-all duration-200 ${
+                      !isUnlocked 
+                        ? 'bg-gray-100 border-gray-300 opacity-60 cursor-not-allowed'
+                        : selectedDifficulty === level.id 
+                          ? `${level.color} shadow-md scale-105 cursor-pointer` 
+                          : 'bg-gray-50 border-gray-200 hover:border-amber-300 cursor-pointer hover:shadow-md'
+                    }`}
+                    onClick={() => isUnlocked && setSelectedDifficulty(selectedDifficulty === level.id ? null : level.id)}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-xl font-semibold">{level.name}</h4>
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl">{level.icon}</span>
                         {!isUnlocked && <Lock className="w-5 h-5 text-gray-500" />}
-                        {!isDiffUnlocked && <Lock className="w-5 h-5 text-red-500" />}
-                      </div>
-                      <p className="text-gray-600 mb-3">{caseItem.description}</p>
-                      <div className="flex items-center gap-4 flex-wrap">
-                        <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getDifficultyColor(caseItem.difficulty)}`}>
-                          {caseItem.difficulty.charAt(0).toUpperCase() + caseItem.difficulty.slice(1)}
-                        </span>
-                        <div className="flex items-center gap-2 text-gray-600">
-                          <Clock className="w-4 h-4" />
-                          <span className="text-sm">{caseItem.timeLimit} minutes</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-gray-600">
-                          <Target className="w-4 h-4" />
-                          <span className="text-sm">{caseItem.pointsAvailable} points</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-gray-600">
-                          <TrendingUp className="w-4 h-4" />
-                          <span className="text-sm capitalize">{caseItem.category}</span>
-                        </div>
+                        {isUnlocked && <Unlock className="w-5 h-5 text-green-600" />}
                       </div>
                     </div>
-                    {isUnlocked && isDiffUnlocked ? (
-                      <Link href={`/courtroom-battle/case-briefing/${caseItem.caseId}`}>
-                        <Button className="bg-amber-600 hover:bg-amber-700 text-white ml-4">
-                          <Play className="w-4 h-4 mr-2" />
-                          Start Case
-                        </Button>
-                      </Link>
-                    ) : (
-                      <Button disabled className="ml-4 opacity-50 cursor-not-allowed">
-                        <Lock className="w-4 h-4 mr-2" />
-                        Locked
-                      </Button>
+                    <p className="text-sm opacity-80 mb-2">{level.description}</p>
+                    <div className="text-xs font-medium">
+                      {stats.byDifficulty[level.id as keyof typeof stats.byDifficulty]} cases available
+                    </div>
+                    {!isUnlocked && (
+                      <div className="mt-2 text-xs text-gray-500">
+                        {level.id === 'intermediate' ? 'Win 1 case to unlock' : 'Win 3 cases to unlock'}
+                      </div>
                     )}
                   </div>
-                  
-                  <div className="grid md:grid-cols-3 gap-4 text-sm text-gray-600 bg-gray-50 rounded-lg p-4">
-                    <div>
-                      <strong>Evidence:</strong> {caseItem.evidenceList.length} pieces
-                    </div>
-                    <div>
-                      <strong>Witnesses:</strong> {caseItem.witnesses.length} available
-                    </div>
-                    <div>
-                      <strong>Complexity:</strong> {
-                        caseItem.difficulty === 'beginner' ? 'Straightforward' :
-                        caseItem.difficulty === 'intermediate' ? 'Moderate' :
-                        'High'
-                      }
-                    </div>
+                );
+              })}
+            </div>
+
+            {selectedDifficulty && (
+              <div className="text-center">
+                <Button 
+                  onClick={() => setSelectedDifficulty(null)}
+                  variant="outline"
+                  className="border-amber-300 text-amber-700 hover:bg-amber-50"
+                >
+                  Show All Difficulties
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Case Categories */}
+          <div className="bg-white rounded-xl shadow-lg p-8 mb-8 border border-amber-200">
+            <h3 className="text-2xl font-semibold text-gray-800 mb-6 text-center">Case Categories</h3>
+            
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+              {caseCategories.map((category) => (
+                <div
+                  key={category.id}
+                  className={`p-6 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:shadow-md ${
+                    selectedCategory === category.id 
+                      ? `${category.color} shadow-md scale-105` 
+                      : 'bg-gray-50 border-gray-200 hover:border-amber-300'
+                  }`}
+                  onClick={() => setSelectedCategory(selectedCategory === category.id ? null : category.id)}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-xl font-semibold">{category.name}</h4>
+                    <Scale className="w-6 h-6 text-amber-600" />
                   </div>
-                  
-                  {!isUnlocked && (
-                    <div className="mt-3 text-sm text-gray-500 bg-yellow-50 border border-yellow-200 rounded p-3">
-                      🔒 Complete previous cases to unlock this case
-                    </div>
-                  )}
-                  
-                  {!isDiffUnlocked && (
-                    <div className="mt-3 text-sm text-gray-500 bg-red-50 border border-red-200 rounded p-3">
-                      🔒 {caseItem.difficulty === 'intermediate' ? 'Win 1 case' : 'Win 3 cases'} to unlock {caseItem.difficulty} difficulty
-                    </div>
-                  )}
+                  <p className="text-sm opacity-80 mb-2">{category.description}</p>
+                  <div className="text-xs font-medium">
+                    {stats.byCategory[category.id as keyof typeof stats.byCategory]} cases
+                  </div>
                 </div>
-              );
-            })}
+              ))}
+            </div>
+
+            {selectedCategory && (
+              <div className="text-center">
+                <Button 
+                  onClick={() => setSelectedCategory(null)}
+                  variant="outline"
+                  className="border-amber-300 text-amber-700 hover:bg-amber-50"
+                >
+                  Show All Categories
+                </Button>
+              </div>
+            )}
           </div>
 
-          {availableCases.length === 0 && (
-            <div className="text-center py-8">
-              <p className="text-gray-600">No unlocked cases match your current filters.</p>
-              <p className="text-sm text-gray-500 mt-2">Complete more cases to unlock additional content.</p>
+          {/* Available Cases */}
+          <div className="bg-white rounded-xl shadow-lg p-8 border border-amber-200">
+            <h3 className="text-2xl font-semibold text-gray-800 mb-6 text-center">
+              {selectedCategory || selectedDifficulty ? 'Filtered Cases' : 'Available Cases'}
+              <span className="text-lg text-gray-500 ml-2">({availableCases.length})</span>
+            </h3>
+            
+            <div className="space-y-6">
+              {sampleCases.map((caseItem) => {
+                const isUnlocked = isCaseUnlocked(caseItem.caseId);
+                const isDiffUnlocked = isDifficultyUnlocked(caseItem.difficulty);
+                const isVisible = !selectedCategory || caseItem.category === selectedCategory;
+                const isDiffVisible = !selectedDifficulty || caseItem.difficulty === selectedDifficulty;
+                
+                if (!isVisible || !isDiffVisible) return null;
+                
+                return (
+                  <div key={caseItem.caseId} className={`border rounded-lg p-6 transition-shadow ${
+                    isUnlocked && isDiffUnlocked 
+                      ? 'border-gray-200 hover:shadow-md' 
+                      : 'border-gray-300 bg-gray-50 opacity-60'
+                  }`}>
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h4 className="text-xl font-semibold text-gray-800">{caseItem.title}</h4>
+                          <span className="text-lg">{getDifficultyStars(caseItem.difficulty)}</span>
+                          {!isUnlocked && <Lock className="w-5 h-5 text-gray-500" />}
+                          {!isDiffUnlocked && <Lock className="w-5 h-5 text-red-500" />}
+                        </div>
+                        <p className="text-gray-600 mb-3">{caseItem.description}</p>
+                        <div className="flex items-center gap-4 flex-wrap">
+                          <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getDifficultyColor(caseItem.difficulty)}`}>
+                            {caseItem.difficulty.charAt(0).toUpperCase() + caseItem.difficulty.slice(1)}
+                          </span>
+                          <div className="flex items-center gap-2 text-gray-600">
+                            <Clock className="w-4 h-4" />
+                            <span className="text-sm">{caseItem.timeLimit} minutes</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-gray-600">
+                            <Target className="w-4 h-4" />
+                            <span className="text-sm">{caseItem.pointsAvailable} points</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-gray-600">
+                            <TrendingUp className="w-4 h-4" />
+                            <span className="text-sm capitalize">{caseItem.category}</span>
+                          </div>
+                        </div>
+                      </div>
+                      {isUnlocked && isDiffUnlocked ? (
+                        <Link href={`/courtroom-battle/case-briefing/${caseItem.caseId}`}>
+                          <Button className="bg-amber-600 hover:bg-amber-700 text-white ml-4">
+                            <Play className="w-4 h-4 mr-2" />
+                            Start Case
+                          </Button>
+                        </Link>
+                      ) : (
+                        <Button disabled className="ml-4 opacity-50 cursor-not-allowed">
+                          <Lock className="w-4 h-4 mr-2" />
+                          Locked
+                        </Button>
+                      )}
+                    </div>
+                    
+                    <div className="grid md:grid-cols-3 gap-4 text-sm text-gray-600 bg-gray-50 rounded-lg p-4">
+                      <div>
+                        <strong>Evidence:</strong> {caseItem.evidenceList.length} pieces
+                      </div>
+                      <div>
+                        <strong>Witnesses:</strong> {caseItem.witnesses.length} available
+                      </div>
+                      <div>
+                        <strong>Complexity:</strong> {
+                          caseItem.difficulty === 'beginner' ? 'Straightforward' :
+                          caseItem.difficulty === 'intermediate' ? 'Moderate' :
+                          'High'
+                        }
+                      </div>
+                    </div>
+                    
+                    {!isUnlocked && (
+                      <div className="mt-3 text-sm text-gray-500 bg-yellow-50 border border-yellow-200 rounded p-3">
+                        🔒 Complete previous cases to unlock this case
+                      </div>
+                    )}
+                    
+                    {!isDiffUnlocked && (
+                      <div className="mt-3 text-sm text-gray-500 bg-red-50 border border-red-200 rounded p-3">
+                        🔒 {caseItem.difficulty === 'intermediate' ? 'Win 1 case' : 'Win 3 cases'} to unlock {caseItem.difficulty} difficulty
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-          )}
-        </div>
 
-        {/* Learning Path Recommendation */}
-        <div className="mt-8 bg-gradient-to-r from-amber-100 to-orange-100 rounded-xl p-6 border border-amber-200">
-          <h4 className="text-lg font-semibold text-gray-800 mb-3">📚 Recommended Learning Path</h4>
-          <div className="grid md:grid-cols-3 gap-4 text-sm text-gray-600">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span><strong>Start:</strong> Easy cases to learn basics</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-              <span><strong>Progress:</strong> Medium cases for strategy</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-              <span><strong>Master:</strong> Hard cases for expertise</span>
+            {availableCases.length === 0 && (
+              <div className="text-center py-8">
+                <p className="text-gray-600">No unlocked cases match your current filters.</p>
+                <p className="text-sm text-gray-500 mt-2">Complete more cases to unlock additional content.</p>
+              </div>
+            )}
+          </div>
+
+          {/* Learning Path Recommendation */}
+          <div className="mt-8 bg-gradient-to-r from-amber-100 to-orange-100 rounded-xl p-6 border border-amber-200">
+            <h4 className="text-lg font-semibold text-gray-800 mb-3">📚 Recommended Learning Path</h4>
+            <div className="grid md:grid-cols-3 gap-4 text-sm text-gray-600">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span><strong>Start:</strong> Easy cases to learn basics</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                <span><strong>Progress:</strong> Medium cases for strategy</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                <span><strong>Master:</strong> Hard cases for expertise</span>
+              </div>
             </div>
           </div>
         </div>
+
+        {/* Modals */}
+        {showStatsModal && (
+          <PlayerStatsComponent onClose={() => setShowStatsModal(false)} />
+        )}
+        
+        <SettingsPanel 
+          isVisible={showSettings}
+          onClose={() => setShowSettings(false)}
+          theme="amber"
+        />
+        
+        <HelpOverlay
+          isVisible={showHelp}
+          onClose={() => setShowHelp(false)}
+          title="Courtroom Battle Help"
+          sections={helpSections}
+          theme="amber"
+        />
       </div>
-
-      {/* Modals */}
-      {showStatsModal && (
-        <PlayerStatsComponent onClose={() => setShowStatsModal(false)} />
-      )}
-      
-      <SettingsPanel 
-        isVisible={showSettings}
-        onClose={() => setShowSettings(false)}
-        theme="amber"
-      />
-      
-      <HelpOverlay
-        isVisible={showHelp}
-        onClose={() => setShowHelp(false)}
-        title="Courtroom Battle Help"
-        sections={helpSections}
-        theme="amber"
-      />
-    </div>
   );
 }
