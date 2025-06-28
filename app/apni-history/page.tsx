@@ -14,7 +14,9 @@ import {
   Crown,
   Scroll,
   Settings,
-  HelpCircle
+  HelpCircle,
+  Trophy,
+  Target
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { historicalPeriods, historicalFigures } from '@/data/historical-data';
@@ -43,6 +45,15 @@ const navigationCards = [
     color: 'text-gray-700',
     count: '3000+ years'
   },
+  {
+    id: 'quiz',
+    title: 'Quiz Challenge',
+    description: 'Test your knowledge with interactive history quizzes',
+    icon: Trophy,
+    href: '/apni-history/quiz',
+    color: 'text-gray-700',
+    count: 'Multiple categories'
+  },
 ];
 
 const helpSections = [
@@ -53,6 +64,7 @@ const helpSections = [
       'Choose a historical figure from the explore section',
       'Start a conversation to learn about their experiences',
       'Use the timeline to understand chronological context',
+      'Take quizzes to test your knowledge',
       'Explore primary documents for deeper insights'
     ]
   },
@@ -64,6 +76,16 @@ const helpSections = [
       'Inquire about their personal experiences and decisions',
       'Request advice based on their historical wisdom',
       'Use suggested questions to guide your conversation'
+    ]
+  },
+  {
+    title: 'Quiz System',
+    content: 'Challenge yourself with our interactive quiz features.',
+    steps: [
+      'Choose from multiple difficulty levels',
+      'Answer timed questions for extra challenge',
+      'Get instant feedback and explanations',
+      'Track your progress and improvement over time'
     ]
   },
   {
@@ -104,12 +126,58 @@ export default function ApniHistoryPage() {
           </p>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
             From ancient empires to modern independence, experience history through 
-            interactive storytelling and immersive learning.
+            interactive storytelling, immersive learning, and challenging quizzes.
           </p>
           
         
         </div>
       </section>
+
+        {/* Navigation Cards */}
+        <section className="py-16 bg-white">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold text-black mb-4">
+                Choose Your Learning Path
+              </h2>
+              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                Explore different ways to learn about Indian history and heritage
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-8">
+              {navigationCards.map((card) => {
+                const Icon = card.icon;
+                return (
+                  <Link key={card.id} href={card.href}>
+                    <div
+                      className={`group cursor-pointer transition-all duration-300 ${
+                        hoveredCard === card.id ? 'scale-105' : 'hover:scale-102'
+                      }`}
+                      onMouseEnter={() => setHoveredCard(card.id)}
+                      onMouseLeave={() => setHoveredCard(null)}
+                    >
+                      <div className="bg-white border border-gray-200 rounded-lg p-8 h-full hover:shadow-lg transition-shadow text-center">
+                        <div className="w-16 h-16 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-6">
+                          <Icon className="w-8 h-8 text-black" />
+                        </div>
+                        <h3 className="text-xl font-bold text-black mb-3">{card.title}</h3>
+                        <p className="text-gray-600 mb-4 leading-relaxed">{card.description}</p>
+                        <div className="text-sm text-gray-500 mb-4">
+                          {typeof card.count === 'string' ? card.count : `${card.count} available`}
+                        </div>
+                        <div className="flex items-center justify-center text-black group-hover:text-gray-600 transition-colors">
+                          <span className="font-medium">Explore</span>
+                          <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </section>
 
         {/* Historical Periods */}
         <section className="py-16 bg-white">
@@ -218,6 +286,28 @@ export default function ApniHistoryPage() {
               Dive deep into the fascinating world of Indian history and discover 
               the stories that shaped our civilization.
             </p>
+            
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link href="/apni-history/quiz">
+                <Button 
+                  size="lg"
+                  className="bg-white text-black hover:bg-gray-100 px-8 py-3 font-semibold"
+                >
+                  <Trophy className="w-5 h-5 mr-2" />
+                  Take a Quiz
+                </Button>
+              </Link>
+              <Link href="/apni-history/explore">
+                <Button 
+                  variant="outline" 
+                  size="lg"
+                  className="border-white text-white hover:bg-white hover:text-black px-8 py-3 font-semibold"
+                >
+                  <Users className="w-5 h-5 mr-2" />
+                  Meet Historical Figures
+                </Button>
+              </Link>
+            </div>
           </div>
         </section>
 
